@@ -1,0 +1,7 @@
+{
+  "name": "Urdu, Eng, ITA, Arbi Alphabets Game",
+  "description": "An interactive, educational puzzle game for children to learn the Urdu alphabet through colorful visuals, pronunciations, and vocabulary examples.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
