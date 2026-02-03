@@ -1,7 +1,5 @@
 {
-  "name": "Urdu, Eng, ITA, Arbi Alphabets Game",
-  "description": "An interactive, educational puzzle game for children to learn the Urdu alphabet through colorful visuals, pronunciations, and vocabulary examples.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
+  "name": "Alphabet Slide: Urdu, Arabic, Pashto & English Jigsaw (حروفِ تہجی پزل)",
+  "description": "An interactive educational sliding puzzle game for children to master Urdu, Arabic, Pashto, English, and Italian alphabets. | بچوں کے لیے اردو، عربی، پشتو، اطالوی اور انگریزی حروفِ تہجی سیکھنے کا ایک انٹرایکٹو تعلیمی پزل گیم۔ | لعبة ألغاز تعليمية تفاعلية للأطفال لتعلم الحروف العربية، الأوردية، البشتوية، الإيطالية والإنجليزية. | د ماشومانو لپاره د پښتو، اردو، عربي، ایټالوي او انګلیسي الفبا زده کړې یو په زړه پورې تعلیمي پزل لوبه.",
+  "requestFramePermissions": []
 }

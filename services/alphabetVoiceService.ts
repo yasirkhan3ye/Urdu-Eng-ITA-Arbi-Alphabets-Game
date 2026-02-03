@@ -35,8 +35,6 @@ export class AlphabetVoiceService {
   private audioContext: AudioContext | null = null;
   private cache: Map<string, AudioBuffer> = new Map();
 
-  constructor() {}
-
   private async getAudioContext() {
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -55,39 +53,39 @@ export class AlphabetVoiceService {
     }
 
     try {
-      // Fix: Create fresh instance right before making an API call to ensure latest key is used.
+      // Create fresh instance per call to ensure correct API key usage
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      
+      let voiceName = 'Kore';
+      let systemPrompt = `You are a helpful preschool teacher. Say the following in a clear, slow, and encouraging tone. Use a professional accent for ${language}.`;
+      
+      // Language-specific voice optimization
+      if (language === 'Arabic') voiceName = 'Puck';
+      else if (language === 'Pashto') voiceName = 'Zephyr';
+      else if (language === 'Urdu') voiceName = 'Charon';
+      else if (language === 'Italian') voiceName = 'Fenrir';
+
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Say in clear, slow ${language}: ${text}` }] }],
+        contents: [{ parts: [{ text: `Language: ${language}. Text to speak: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: language === 'Arabic' ? 'Puck' : 'Kore' },
+              prebuiltVoiceConfig: { voiceName },
             },
           },
+          systemInstruction: systemPrompt
         },
       });
 
-      const candidates = response.candidates;
-      if (!candidates || candidates.length === 0) throw new Error("No candidates received");
-      
-      const parts = candidates[0].content?.parts;
-      if (!parts) throw new Error("No parts in candidate content");
-
-      const audioPart = parts.find(p => p.inlineData && p.inlineData.data);
+      const audioPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.data);
       const base64Audio = audioPart?.inlineData?.data;
 
-      if (!base64Audio) throw new Error("No audio data found in response parts");
+      if (!base64Audio) throw new Error("No audio data found");
 
       const ctx = await this.getAudioContext();
-      const audioBuffer = await decodeAudioData(
-        decode(base64Audio),
-        ctx,
-        24000,
-        1,
-      );
+      const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
 
       this.cache.set(cacheKey, audioBuffer);
       this.playBuffer(audioBuffer);

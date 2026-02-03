@@ -71,15 +71,55 @@ export const PASHTO_ALPHABET: AlphabetLetter[] = [
   { id: 'p_18', char: 'ز', name: 'Zay', exampleWord: 'زرافه (Giraffe)', exampleImage: '', color: 'bg-teal-400', language: 'Pashto' },
   { id: 'p_19', char: 'ژ', name: 'Zhe', exampleWord: 'ژاله (Hail)', exampleImage: '', color: 'bg-indigo-400', language: 'Pashto' },
   { id: 'p_20', char: 'ږ', name: 'Gzhe', exampleWord: 'موږک (Mouse)', exampleImage: '', color: 'bg-emerald-400', language: 'Pashto' },
+  { id: 'p_21', char: 'س', name: 'Seen', exampleWord: 'سیب (Apple)', exampleImage: '', color: 'bg-red-500', language: 'Pashto' },
+  { id: 'p_22', char: 'ش', name: 'Sheen', exampleWord: 'شیدې (Milk)', exampleImage: '', color: 'bg-blue-300', language: 'Pashto' },
+  { id: 'p_23', char: 'ښ', name: 'Xhin', exampleWord: 'ښوونځی (School)', exampleImage: '', color: 'bg-green-700', language: 'Pashto' },
+  { id: 'p_24', char: 'ص', name: 'Saad', exampleWord: 'صندوق (Box)', exampleImage: '', color: 'bg-amber-300', language: 'Pashto' },
+  { id: 'p_25', char: 'ض', name: 'Zaad', exampleWord: 'ضعیف (Weak)', exampleImage: '', color: 'bg-rose-500', language: 'Pashto' },
+  { id: 'p_26', char: 'ط', name: 'Toe', exampleWord: 'طوطا (Parrot)', exampleImage: '', color: 'bg-orange-300', language: 'Pashto' },
+  { id: 'p_27', char: 'ظ', name: 'Zoe', exampleWord: 'ظروف (Vessels)', exampleImage: '', color: 'bg-teal-300', language: 'Pashto' },
+  { id: 'p_28', char: 'ع', name: 'Ain', exampleWord: 'عینک (Glasses)', exampleImage: '', color: 'bg-purple-300', language: 'Pashto' },
+  { id: 'p_29', char: 'غ', name: 'Ghain', exampleWord: 'غوا (Cow)', exampleImage: '', color: 'bg-emerald-300', language: 'Pashto' },
+  { id: 'p_30', char: 'ف', name: 'Fe', exampleWord: 'فیل (Elephant)', exampleImage: '', color: 'bg-sky-300', language: 'Pashto' },
+  { id: 'p_31', char: 'ق', name: 'Qaf', exampleWord: 'قلم (Pen)', exampleImage: '', color: 'bg-red-300', language: 'Pashto' },
+  { id: 'p_32', char: 'ک', name: 'Kaf', exampleWord: 'کتاب (Book)', exampleImage: '', color: 'bg-blue-600', language: 'Pashto' },
+  { id: 'p_33', char: 'ګ', name: 'Gaf', exampleWord: 'ګل (Flower)', exampleImage: '', color: 'bg-green-500', language: 'Pashto' },
+  { id: 'p_34', char: 'ل', name: 'Lam', exampleWord: 'لوند (Wet)', exampleImage: '', color: 'bg-yellow-400', language: 'Pashto' },
+  { id: 'p_35', char: 'م', name: 'Mim', exampleWord: 'مڼه (Apple)', exampleImage: '', color: 'bg-pink-500', language: 'Pashto' },
+  { id: 'p_36', char: 'ن', name: 'Nun', exampleWord: 'نمر (Sun)', exampleImage: '', color: 'bg-orange-500', language: 'Pashto' },
+  { id: 'p_37', char: 'ڼ', name: 'Nrun', exampleWord: 'ګاڼه (Jewelry)', exampleImage: '', color: 'bg-amber-500', language: 'Pashto' },
+  { id: 'p_38', char: 'و', name: 'Waw', exampleWord: 'ورځ (Day)', exampleImage: '', color: 'bg-indigo-300', language: 'Pashto' },
+  { id: 'p_39', char: 'ه', name: 'He', exampleWord: 'هګۍ (Egg)', exampleImage: '', color: 'bg-lime-300', language: 'Pashto' },
+  { id: 'p_40', char: 'ی', name: 'Ye', exampleWord: 'یخ (Cold)', exampleImage: '', color: 'bg-fuchsia-300', language: 'Pashto' },
 ];
 
 export const ENGLISH_ALPHABET: AlphabetLetter[] = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((c, i) => ({
   id: `e_${i}`, char: c, name: c, exampleWord: '', exampleImage: '', color: `bg-${['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'teal', 'amber', 'indigo', 'emerald', 'rose', 'cyan', 'violet', 'lime', 'fuchsia', 'sky'][i % 17]}-400`, language: 'English'
 }));
 
-export const ITALIAN_ALPHABET: AlphabetLetter[] = 'ABCDEFGHILMNOPQRSTUVZ'.split('').map((c, i) => ({
-  id: `i_${i}`, char: c, name: c, exampleWord: '', exampleImage: '', color: `bg-${['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'teal', 'amber', 'indigo', 'emerald', 'rose', 'cyan', 'violet', 'lime', 'fuchsia', 'sky'][i % 17]}-500`, language: 'Italian'
-}));
+export const ITALIAN_ALPHABET: AlphabetLetter[] = [
+  { id: 'i_1', char: 'A', name: 'A', exampleWord: 'Arancia', exampleImage: '', color: 'bg-red-500', language: 'Italian' },
+  { id: 'i_2', char: 'B', name: 'B', exampleWord: 'Banana', exampleImage: '', color: 'bg-blue-500', language: 'Italian' },
+  { id: 'i_3', char: 'C', name: 'C', exampleWord: 'Cane', exampleImage: '', color: 'bg-green-500', language: 'Italian' },
+  { id: 'i_4', char: 'D', name: 'D', exampleWord: 'Delfino', exampleImage: '', color: 'bg-yellow-500', language: 'Italian' },
+  { id: 'i_5', char: 'E', name: 'E', exampleWord: 'Elefante', exampleImage: '', color: 'bg-orange-500', language: 'Italian' },
+  { id: 'i_6', char: 'F', name: 'F', exampleWord: 'Fiore', exampleImage: '', color: 'bg-purple-500', language: 'Italian' },
+  { id: 'i_7', char: 'G', name: 'G', exampleWord: 'Gatto', exampleImage: '', color: 'bg-pink-500', language: 'Italian' },
+  { id: 'i_8', char: 'H', name: 'H', exampleWord: 'Hotel', exampleImage: '', color: 'bg-teal-500', language: 'Italian' },
+  { id: 'i_9', char: 'I', name: 'I', exampleWord: 'Isola', exampleImage: '', color: 'bg-amber-500', language: 'Italian' },
+  { id: 'i_10', char: 'L', name: 'L', exampleWord: 'Leone', exampleImage: '', color: 'bg-indigo-500', language: 'Italian' },
+  { id: 'i_11', char: 'M', name: 'M', exampleWord: 'Mela', exampleImage: '', color: 'bg-emerald-500', language: 'Italian' },
+  { id: 'i_12', char: 'N', name: 'N', exampleWord: 'Nave', exampleImage: '', color: 'bg-rose-500', language: 'Italian' },
+  { id: 'i_13', char: 'O', name: 'O', exampleWord: 'Orso', exampleImage: '', color: 'bg-cyan-500', language: 'Italian' },
+  { id: 'i_14', char: 'P', name: 'P', exampleWord: 'Pesce', exampleImage: '', color: 'bg-violet-500', language: 'Italian' },
+  { id: 'i_15', char: 'Q', name: 'Q', exampleWord: 'Quadro', exampleImage: '', color: 'bg-lime-500', language: 'Italian' },
+  { id: 'i_16', char: 'R', name: 'R', exampleWord: 'Rana', exampleImage: '', color: 'bg-fuchsia-500', language: 'Italian' },
+  { id: 'i_17', char: 'S', name: 'S', exampleWord: 'Sole', exampleImage: '', color: 'bg-sky-500', language: 'Italian' },
+  { id: 'i_18', char: 'T', name: 'T', exampleWord: 'Tartaruga', exampleImage: '', color: 'bg-red-600', language: 'Italian' },
+  { id: 'i_19', char: 'U', name: 'U', exampleWord: 'Uccello', exampleImage: '', color: 'bg-blue-600', language: 'Italian' },
+  { id: 'i_20', char: 'V', name: 'V', exampleWord: 'Volpe', exampleImage: '', color: 'bg-green-600', language: 'Italian' },
+  { id: 'i_21', char: 'Z', name: 'Z', exampleWord: 'Zebra', exampleImage: '', color: 'bg-orange-600', language: 'Italian' },
+];
 
 export const ALL_ALPHABET: AlphabetLetter[] = [
   ...URDU_ALPHABET, 

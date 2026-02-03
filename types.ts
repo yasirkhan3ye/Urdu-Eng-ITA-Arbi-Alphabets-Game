@@ -11,7 +11,7 @@ export interface AlphabetLetter {
   language: Language;
 }
 
-export type GameState = 'home' | 'language-select' | 'level-select' | 'playing' | 'complete' | 'image-gen';
+export type GameState = 'home' | 'language-select' | 'level-select' | 'playing' | 'complete';
 
 export interface Level {
   id: number;

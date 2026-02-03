@@ -3,11 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameState, Level, AlphabetLetter, Language, TileState } from './types';
 import { ALL_ALPHABET, URDU_LEVELS, ARABIC_LEVELS, ENGLISH_LEVELS, ITALIAN_LEVELS, PASHTO_LEVELS } from './constants';
 import { alphabetVoiceService } from './services/alphabetVoiceService';
-import { imageService, ImageSize } from './services/imageService';
 
 const NUM_EMPTY_SPACES = 2;
 
-// Helper to render star rating for levels
 const renderStars = (stars: number, sizeClass: string = 'text-2xl') => {
   return (
     <div className={`flex gap-1 ${sizeClass}`}>
@@ -18,7 +16,6 @@ const renderStars = (stars: number, sizeClass: string = 'text-2xl') => {
   );
 };
 
-// Helper to determine character size based on grid dimensions for responsive UI
 const getCharSizeClass = (gridSize: number) => {
   if (gridSize <= 3) return 'text-6xl sm:text-7xl';
   if (gridSize <= 4) return 'text-4xl sm:text-5xl';
@@ -37,23 +34,28 @@ const App: React.FC = () => {
   const [moves, setMoves] = useState(0);
   const [announcement, setAnnouncement] = useState<string>('');
   
-  // Image generation state
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<ImageSize>("1K");
-  const [imagePrompt, setImagePrompt] = useState("");
-
-  const successSoundRef = useRef<HTMLAudioElement | null>(null);
-
   const [celebration, setCelebration] = useState<{ letter: AlphabetLetter | null; show: boolean }>({
     letter: null,
     show: false,
   });
 
+  // Handle dynamic document direction based on language
   useEffect(() => {
-    successSoundRef.current = new Audio('https://pixabay.com/static/audio/2022/03/10/audio_325d734568.mp3?filename=correct-6033.mp3');
-    successSoundRef.current.volume = 0.4;
+    if (selectedLanguage) {
+      const rtlLanguages: Language[] = ['Urdu', 'Arabic', 'Pashto'];
+      const isRtl = rtlLanguages.includes(selectedLanguage);
+      document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+      document.documentElement.lang = selectedLanguage === 'Urdu' ? 'ur' : 
+                                       selectedLanguage === 'Arabic' ? 'ar' : 
+                                       selectedLanguage === 'Pashto' ? 'ps' : 
+                                       selectedLanguage === 'Italian' ? 'it' : 'en';
+    } else {
+      document.documentElement.dir = 'ltr';
+      document.documentElement.lang = 'en';
+    }
+  }, [selectedLanguage]);
 
+  useEffect(() => {
     const saved = localStorage.getItem('alphabet_sliding_progress_multi_empty');
     if (saved) {
       try {
@@ -74,29 +76,6 @@ const App: React.FC = () => {
       }
       return prev;
     });
-  };
-
-  const handleGenerateImage = async () => {
-    try {
-      const aistudio = (window as any).aistudio;
-      const hasKey = await aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        await aistudio.openSelectKey();
-      }
-
-      setIsGenerating(true);
-      const url = await imageService.generateAlphabetImage(imagePrompt || "A cute cartoon alphabet animal", selectedSize);
-      setGeneratedImage(url);
-    } catch (err: any) {
-      if (err.message === "API_KEY_NOT_FOUND") {
-        await (window as any).aistudio.openSelectKey();
-      } else {
-        console.error("Image generation failed:", err);
-        setAnnouncement("Magic painting failed. Try again!");
-      }
-    } finally {
-      setIsGenerating(false);
-    }
   };
 
   const startLevel = (level: Level) => {
@@ -186,10 +165,12 @@ const App: React.FC = () => {
       setTiles(newTiles);
       setMoves(m => m + 1);
       alphabetVoiceService.speak(clickedTile.letter.char, clickedTile.letter.language);
+      
       if (clickedTile.targetPos === emptyPos) {
         setCelebration({ letter: clickedTile.letter, show: true });
         setTimeout(() => setCelebration(prev => ({ ...prev, show: false })), 2000);
       }
+      
       if (newTiles.every((t) => t.letter === null || t.targetPos === t.currentPos)) {
         let stars = 1;
         const sec = (Date.now() - startTime) / 1000;
@@ -205,19 +186,13 @@ const App: React.FC = () => {
   const renderHome = () => (
     <div className="flex flex-col items-center justify-center min-h-screen text-center p-6 sky-theme">
       <h1 className="text-6xl md:text-8xl font-kids text-white mb-8 drop-shadow-lg">Alphabet Slide</h1>
-      <p className="text-2xl text-blue-100 mb-12 max-w-lg font-kids uppercase tracking-wider">Play and Learn!</p>
+      <p className="text-2xl text-blue-100 mb-12 max-w-lg font-kids uppercase tracking-wider">PLAY AND LEARN</p>
       <div className="flex flex-col gap-4">
         <button 
           onClick={() => setGameState('language-select')}
           className="bg-yellow-400 hover:bg-yellow-300 text-indigo-900 font-bold py-6 px-12 rounded-full text-3xl shadow-xl hover:scale-110 transition-transform border-4 border-white"
         >
           TAP TO PLAY
-        </button>
-        <button 
-          onClick={() => setGameState('image-gen')}
-          className="bg-purple-500 hover:bg-purple-400 text-white font-bold py-4 px-8 rounded-full text-xl shadow-xl transition-all border-4 border-white flex items-center justify-center gap-2"
-        >
-          <span>Magic Painter</span> 🎨
         </button>
       </div>
     </div>
@@ -252,67 +227,16 @@ const App: React.FC = () => {
           </button>
         ))}
       </div>
-      <button onClick={() => setGameState('home')} className="mt-12 text-white text-xl font-bold underline hover:opacity-80">Go Back</button>
-    </div>
-  );
-
-  const renderImageGen = () => (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-purple-600 to-pink-500 flex flex-col items-center overflow-y-auto pb-24">
-      <h2 className="text-5xl font-kids text-white mb-8 drop-shadow-lg text-center">Magic Painter 🎨</h2>
-      <div className="w-full max-w-2xl bg-white rounded-[3rem] p-8 shadow-2xl">
-        <div className="mb-6">
-          <label className="block text-indigo-900 text-xl font-bold mb-2">What should I draw?</label>
-          <input 
-            type="text"
-            className="w-full p-4 rounded-2xl border-4 border-indigo-100 text-xl focus:border-purple-400 outline-none transition-all"
-            placeholder="e.g. A happy lion with a crown..."
-            value={imagePrompt}
-            onChange={(e) => setImagePrompt(e.target.value)}
-          />
-        </div>
-        <div className="mb-8">
-          <label className="block text-indigo-900 text-xl font-bold mb-4 text-center">Image Quality (Size)</label>
-          <div className="flex justify-center gap-4">
-            {(["1K", "2K", "4K"] as ImageSize[]).map(size => (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                className={`py-3 px-8 rounded-2xl text-xl font-bold transition-all border-4 
-                  ${selectedSize === size ? 'bg-purple-600 border-purple-200 text-white scale-110 shadow-lg' : 'bg-indigo-50 border-indigo-100 text-indigo-400'}`}
-              >
-                {size}
-              </button>
-            ))}
-          </div>
-          <p className="mt-4 text-xs text-center text-indigo-300">
-            Higher quality requires a paid project key. <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="underline">Docs</a>
-          </p>
-        </div>
-        <button 
-          onClick={handleGenerateImage}
-          disabled={isGenerating || !imagePrompt}
-          className={`w-full py-6 rounded-[2rem] text-3xl font-bold shadow-xl transition-all border-4 border-white
-            ${isGenerating || !imagePrompt ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-yellow-400 text-indigo-900 hover:scale-105 active:scale-95'}`}
-        >
-          {isGenerating ? 'Casting Magic... ✨' : 'GENERATE ART 🪄'}
-        </button>
-        {generatedImage && (
-          <div className="mt-10 animate-success">
-            <img src={generatedImage} alt="Magic Result" className="w-full h-auto rounded-[2rem] shadow-2xl border-8 border-indigo-50" />
-            <a href={generatedImage} download="magic-art.png" className="mt-6 block text-center text-purple-600 font-bold text-xl underline">Save to Gallery</a>
-          </div>
-        )}
-      </div>
-      <button onClick={() => setGameState('home')} className="mt-10 text-white font-bold text-2xl underline hover:opacity-80">Go Home</button>
+      <button onClick={() => { setGameState('home'); setSelectedLanguage(null); }} className="mt-12 text-white text-xl font-bold underline hover:opacity-80">Go Back</button>
     </div>
   );
 
   const renderLevelSelect = () => {
     let levels = URDU_LEVELS;
     if (selectedLanguage === 'Arabic') levels = ARABIC_LEVELS;
-    if (selectedLanguage === 'English') levels = ENGLISH_LEVELS;
-    if (selectedLanguage === 'Italian') levels = ITALIAN_LEVELS;
-    if (selectedLanguage === 'Pashto') levels = PASHTO_LEVELS;
+    else if (selectedLanguage === 'English') levels = ENGLISH_LEVELS;
+    else if (selectedLanguage === 'Italian') levels = ITALIAN_LEVELS;
+    else if (selectedLanguage === 'Pashto') levels = PASHTO_LEVELS;
     
     let themeClass = 'bg-blue-50';
     if (selectedLanguage === 'Arabic') themeClass = 'desert-theme';
@@ -321,7 +245,7 @@ const App: React.FC = () => {
     return (
       <div className={`h-screen w-full p-8 ${themeClass} overflow-y-auto pb-24`}>
         <div className="max-w-6xl mx-auto">
-          <button onClick={() => setGameState('language-select')} className="mb-8 text-indigo-600 font-normal flex items-center gap-2 hover:underline text-xl">← Change Language</button>
+          <button onClick={() => { setGameState('language-select'); setSelectedLanguage(null); }} className="mb-8 text-indigo-600 font-normal flex items-center gap-2 hover:underline text-xl">← Change Language</button>
           <h2 className="text-4xl font-kids text-indigo-900 mb-12 text-center uppercase">{selectedLanguage} Fun Levels</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {levels.map(level => {
@@ -361,6 +285,7 @@ const App: React.FC = () => {
             const row = Math.floor(tile.currentPos / size);
             const col = tile.currentPos % size;
             const isCorrect = tile.targetPos === tile.currentPos;
+            
             const cellStyle: React.CSSProperties = {
               position: 'absolute',
               width: `calc((100% - ${(size + 1) * 8}px) / ${size})`,
@@ -369,10 +294,23 @@ const App: React.FC = () => {
               left: `calc(${col * (100 / size)}% + 8px)`,
               transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
             };
+            
             if (!tile.letter) return <div key={`empty-${tile.targetPos}`} style={cellStyle} className="rounded-none bg-white/10 border-2 border-dashed border-white/20 flex items-center justify-center pointer-events-none" aria-hidden="true"><span className="text-xl opacity-10">🕳️</span></div>;
+            
             const fontClass = tile.letter.language === 'Urdu' || tile.letter.language === 'Pashto' ? 'urdu-text' : tile.letter.language === 'Arabic' ? 'arabic-text' : '';
+            
             return (
-              <button key={(tile.letter as any).instanceId} onClick={() => handleTileClick(tile.currentPos)} style={cellStyle} className={`rounded-none flex flex-col items-center justify-center shadow-lg transition-all duration-300 transform text-white border-2 sm:border-4 border-white/40 ${tile.letter.color} ${isCorrect ? 'tile-correct brightness-105' : 'hover:brightness-110 active:scale-95'}`} aria-label={`Tile ${tile.letter.name}`}>
+              <button 
+                key={(tile.letter as any).instanceId} 
+                onClick={() => handleTileClick(tile.currentPos)} 
+                style={cellStyle} 
+                className={`rounded-none flex flex-col items-center justify-center shadow-lg transition-all duration-300 transform text-white border-2 sm:border-4 border-white/40 group ${tile.letter.color} ${isCorrect ? 'tile-correct brightness-105' : 'hover:brightness-110 active:scale-95'}`} 
+                aria-label={`Tile ${tile.letter.name}`}
+              >
+                <div className="invisible group-hover:visible absolute -top-12 left-1/2 -translate-x-1/2 bg-white text-indigo-900 text-sm font-bold px-3 py-1.5 rounded-xl shadow-2xl z-50 whitespace-nowrap border-2 border-indigo-100 pointer-events-none transition-all duration-200 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100">
+                  {tile.letter.name}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white"></div>
+                </div>
                 <span className="absolute top-1 left-2 text-[8px] sm:text-xs opacity-60 font-bold" aria-hidden="true">{tile.targetPos + 1}</span>
                 <span className={`${fontClass} ${charSizeClass} pointer-events-none drop-shadow-lg`} aria-hidden="true">{tile.letter.char}</span>
               </button>
@@ -398,7 +336,7 @@ const App: React.FC = () => {
   const renderComplete = () => (
     <div className="fixed inset-0 bg-indigo-900 bg-opacity-95 flex flex-col items-center justify-center z-[100] text-center p-6 overflow-y-auto">
       <h2 className="text-7xl md:text-9xl font-kids text-white mb-8 drop-shadow-xl uppercase">DONE</h2>
-      <div className="flex flex-col items-center bg-white/10 backdrop-blur-sm p-8 md:p-12 rounded-[3rem] mb-12 shadow-2xl border-4 border-white/20 w-full max-w-sm">
+      <div className="flex flex-col items-center bg-white/10 backdrop-blur-sm p-8 md:p-12 rounded-[3rem] mb-12 shadow-2xl border-4 border-white/20 w-full max-sm:px-4 max-w-sm">
         <p className="text-4xl text-yellow-400 mb-2 font-kids uppercase tracking-widest font-bold">VICTORY</p>
         <p className="text-xl text-indigo-200 mb-8 font-kids uppercase font-bold">PUZZLE MASTER</p>
         <div className="flex gap-4 text-8xl mb-4">
@@ -431,7 +369,6 @@ const App: React.FC = () => {
       {gameState === 'level-select' && renderLevelSelect()}
       {gameState === 'playing' && renderPlaying()}
       {gameState === 'complete' && renderComplete()}
-      {gameState === 'image-gen' && renderImageGen()}
     </div>
   );
 };
