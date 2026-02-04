@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameState, Level, AlphabetLetter, Language, TileState } from './types';
 import { ALL_ALPHABET, URDU_LEVELS, ARABIC_LEVELS, ENGLISH_LEVELS, ITALIAN_LEVELS, PASHTO_LEVELS } from './constants';
 import { alphabetVoiceService } from './services/alphabetVoiceService';
@@ -40,19 +40,13 @@ const App: React.FC = () => {
     show: false,
   });
 
-  // Handle dynamic document direction based on language
   useEffect(() => {
     if (selectedLanguage) {
       const rtlLanguages: Language[] = ['Urdu', 'Arabic', 'Pashto'];
       const isRtl = rtlLanguages.includes(selectedLanguage);
       document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
-      document.documentElement.lang = selectedLanguage === 'Urdu' ? 'ur' : 
-                                       selectedLanguage === 'Arabic' ? 'ar' : 
-                                       selectedLanguage === 'Pashto' ? 'ps' : 
-                                       selectedLanguage === 'Italian' ? 'it' : 'en';
     } else {
       document.documentElement.dir = 'ltr';
-      document.documentElement.lang = 'en';
     }
   }, [selectedLanguage]);
 
@@ -61,9 +55,7 @@ const App: React.FC = () => {
     if (saved) {
       try {
         setLevelProgress(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse progress", e);
-      }
+      } catch (e) { console.error(e); }
     }
   }, []);
 
@@ -95,26 +87,15 @@ const App: React.FC = () => {
     });
     
     const initialTiles: TileState[] = [];
-
     for (let i = 0; i < levelLetters.length; i++) {
-      initialTiles.push({
-        letter: levelLetters[i] as any,
-        currentPos: i,
-        targetPos: i
-      });
+      initialTiles.push({ letter: levelLetters[i] as any, currentPos: i, targetPos: i });
     }
-
     for (let i = 0; i < NUM_EMPTY_SPACES; i++) {
-      initialTiles.push({
-        letter: null,
-        currentPos: numLetters + i,
-        targetPos: numLetters + i
-      });
+      initialTiles.push({ letter: null, currentPos: numLetters + i, targetPos: numLetters + i });
     }
 
     let tempTiles = [...initialTiles];
-    let shuffleSteps = size * size * 4;
-
+    let shuffleSteps = size * size * 8;
     for (let i = 0; i < shuffleSteps; i++) {
       const emptyPositions = tempTiles.filter(t => t.letter === null).map(t => t.currentPos);
       const randomEmptyPos = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
@@ -135,7 +116,6 @@ const App: React.FC = () => {
         emptyTile.currentPos = tempPos;
       }
     }
-
     setTiles(tempTiles);
     setGameState('playing');
   };
@@ -168,93 +148,90 @@ const App: React.FC = () => {
       
       if (clickedTile.targetPos === emptyPos) {
         setCelebration({ letter: clickedTile.letter, show: true });
-        setTimeout(() => setCelebration(prev => ({ ...prev, show: false })), 2000);
+        setTimeout(() => setCelebration(prev => ({ ...prev, show: false })), 1500);
       }
       
       if (newTiles.every((t) => t.letter === null || t.targetPos === t.currentPos)) {
         let stars = 1;
         const sec = (Date.now() - startTime) / 1000;
-        if (sec < (size * size * 15)) stars = 3;
-        else if (sec < (size * size * 40)) stars = 2;
+        if (sec < (size * size * 10)) stars = 3;
+        else if (sec < (size * size * 25)) stars = 2;
         setLastStars(stars);
         saveProgress(currentLevel.id, stars);
-        setTimeout(() => setGameState('complete'), 1000);
+        setTimeout(() => setGameState('complete'), 800);
       }
     }
   };
 
   const renderHome = () => (
-    <div className="flex flex-col items-center justify-center h-full w-full text-center p-6 sky-theme overflow-hidden">
-      <h1 className="text-5xl sm:text-7xl md:text-8xl font-kids text-white mb-4 sm:mb-8 drop-shadow-lg">Alphabet Slide</h1>
-      <p className="text-lg sm:text-2xl text-blue-100 mb-8 sm:mb-12 max-w-lg font-kids uppercase tracking-wider px-4">PLAY AND LEARN</p>
-      <div className="flex flex-col gap-4 w-full max-w-xs">
-        <button 
-          onClick={() => setGameState('language-select')}
-          className="bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-indigo-900 font-bold py-5 px-8 sm:py-6 sm:px-12 rounded-full text-2xl sm:text-3xl shadow-xl transition-all border-4 border-white"
-        >
-          TAP TO PLAY
-        </button>
-      </div>
+    <div className="flex flex-col items-center justify-center h-full w-full text-center p-6 sky-theme overflow-hidden pt-safe pb-safe px-safe">
+      <h1 className="text-6xl sm:text-8xl md:text-9xl font-kids text-white mb-6 drop-shadow-2xl">Alphabet Slide</h1>
+      <p className="text-xl sm:text-3xl text-blue-100 mb-12 max-w-lg font-kids uppercase tracking-widest px-4">Tap to Learn & Play</p>
+      <button 
+        onClick={() => setGameState('language-select')}
+        className="bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-indigo-900 font-bold py-6 px-12 sm:py-8 sm:px-20 rounded-full text-3xl sm:text-5xl shadow-[0_12px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all border-4 border-white"
+      >
+        PLAY NOW
+      </button>
     </div>
   );
 
   const renderLanguageSelect = () => (
-    <div className="flex flex-col items-center justify-center h-full w-full sky-theme p-4 sm:p-6 overflow-hidden">
-      <h2 className="text-3xl sm:text-5xl font-kids text-white mb-6 sm:mb-10 drop-shadow-lg text-center">Pick Your Journey</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 w-full max-w-4xl justify-items-center items-stretch max-h-[70vh] overflow-y-auto px-2">
-        {[
-          { lang: 'Urdu', icon: '🇵🇰', label: 'اردو زبان' },
-          { lang: 'Pashto', icon: '🇦🇫', label: 'پښتو' },
-          { lang: 'Arabic', icon: '🇸🇦', label: 'اللغة العربية' },
-          { lang: 'English', icon: '🇬🇧', label: 'English' },
-          { lang: 'Italian', icon: '🇮🇹', label: 'Italiano' }
-        ].map(({ lang, icon, label }) => (
-          <button 
-            key={lang}
-            onClick={() => { setSelectedLanguage(lang as any); setGameState('level-select'); }}
-            className={`bg-white w-full h-32 sm:h-44 md:h-56 rounded-3xl sm:rounded-[2.5rem] shadow-lg active:scale-95 transition-all border-4 group flex flex-col items-center justify-center p-2 text-center
-              ${lang === 'Urdu' ? 'border-blue-400' : lang === 'Arabic' ? 'border-orange-400' : lang === 'Pashto' ? 'border-amber-600' : 'border-indigo-400'}`}
-          >
-            <span className="text-3xl sm:text-5xl block mb-1 group-hover:rotate-12 transition-transform" aria-hidden="true">{icon}</span>
-            <div className="flex flex-col items-center justify-center gap-0 w-full overflow-hidden">
-              <span className={`text-lg sm:text-2xl block text-indigo-900 leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full px-1 ${lang === 'Urdu' || lang === 'Pashto' ? 'urdu-text' : lang === 'Arabic' ? 'arabic-text' : ''}`}>
-                {label}
-              </span>
-              <span className="text-[10px] sm:text-sm block text-indigo-400 font-kids uppercase tracking-wider">
-                {lang}
-              </span>
-            </div>
-          </button>
-        ))}
+    <div className="flex flex-col items-center h-full w-full sky-theme pt-safe pb-safe px-safe overflow-hidden">
+      <div className="flex flex-col items-center justify-center h-full w-full max-w-4xl px-4 py-4 sm:py-8">
+        <h2 className="text-3xl sm:text-5xl font-kids text-white mb-6 sm:mb-10 drop-shadow-lg text-center uppercase tracking-wider">Pick Your Journey</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 w-full justify-items-center items-stretch max-h-[65vh] overflow-y-auto pr-1">
+          {[
+            { lang: 'Urdu', icon: '🇵🇰', label: 'اردو زبان' },
+            { lang: 'Pashto', icon: '🇦🇫', label: 'پښتو' },
+            { lang: 'Arabic', icon: '🇸🇦', label: 'اللغة العربية' },
+            { lang: 'English', icon: '🇬🇧', label: 'English' },
+            { lang: 'Italian', icon: '🇮🇹', label: 'Italiano' }
+          ].map(({ lang, icon, label }) => (
+            <button 
+              key={lang}
+              onClick={() => { setSelectedLanguage(lang as any); setGameState('level-select'); }}
+              className={`bg-white w-full h-auto min-h-[140px] sm:min-h-[200px] rounded-[2rem] sm:rounded-[3rem] shadow-xl active:scale-95 transition-all border-4 group flex flex-col items-center justify-center p-4 text-center
+                ${lang === 'Urdu' ? 'border-blue-400' : lang === 'Arabic' ? 'border-orange-400' : lang === 'Pashto' ? 'border-amber-600' : 'border-indigo-400'}`}
+            >
+              <span className="text-4xl sm:text-6xl mb-2 sm:mb-3 transition-transform group-hover:scale-110" aria-hidden="true">{icon}</span>
+              <div className="flex flex-col items-center justify-center w-full">
+                <span className={`text-lg sm:text-2xl font-bold text-indigo-950 leading-tight mb-1 ${lang === 'Urdu' || lang === 'Pashto' ? 'urdu-text' : lang === 'Arabic' ? 'arabic-text' : ''}`}>
+                  {label}
+                </span>
+                <span className="text-[10px] sm:text-sm font-kids text-indigo-400 uppercase tracking-widest font-black opacity-60">
+                  {lang}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => { setGameState('home'); setSelectedLanguage(null); }} className="mt-6 sm:mt-10 text-white text-lg sm:text-2xl font-bold underline hover:opacity-80 active:scale-95 decoration-2 underline-offset-4">← Go Back</button>
       </div>
-      <button onClick={() => { setGameState('home'); setSelectedLanguage(null); }} className="mt-6 sm:mt-10 text-white text-lg sm:text-xl font-bold underline hover:opacity-80 active:scale-95">Go Back</button>
     </div>
   );
 
   const renderLevelSelect = () => {
-    let levels = URDU_LEVELS;
-    if (selectedLanguage === 'Arabic') levels = ARABIC_LEVELS;
-    else if (selectedLanguage === 'English') levels = ENGLISH_LEVELS;
-    else if (selectedLanguage === 'Italian') levels = ITALIAN_LEVELS;
-    else if (selectedLanguage === 'Pashto') levels = PASHTO_LEVELS;
+    const levels = selectedLanguage === 'Arabic' ? ARABIC_LEVELS : 
+                   selectedLanguage === 'English' ? ENGLISH_LEVELS : 
+                   selectedLanguage === 'Italian' ? ITALIAN_LEVELS : 
+                   selectedLanguage === 'Pashto' ? PASHTO_LEVELS : URDU_LEVELS;
     
-    let themeClass = 'sky-theme'; // Default
-    if (selectedLanguage === 'Arabic') themeClass = 'desert-theme';
-    if (selectedLanguage === 'Pashto') themeClass = 'pashto-theme';
+    const themeClass = selectedLanguage === 'Arabic' ? 'desert-theme' : selectedLanguage === 'Pashto' ? 'pashto-theme' : 'sky-theme';
 
     return (
-      <div className={`h-full w-full p-4 sm:p-8 ${themeClass} flex flex-col items-center overflow-hidden`}>
-        <div className="w-full max-w-6xl flex flex-col h-full">
-          <button onClick={() => { setGameState('language-select'); setSelectedLanguage(null); }} className="mb-4 text-indigo-900 bg-white/50 backdrop-blur-sm self-start px-4 py-2 rounded-full font-bold flex items-center gap-2 hover:bg-white transition-all text-sm sm:text-lg">← Change Language</button>
-          <h2 className="text-2xl sm:text-4xl font-kids text-white mb-6 text-center uppercase drop-shadow-md">{selectedLanguage} Levels</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 overflow-y-auto flex-1 pb-10 px-2 scroll-smooth">
+      <div className={`h-full w-full pt-safe pb-safe px-safe ${themeClass} flex flex-col items-center overflow-hidden`}>
+        <div className="w-full max-w-6xl flex flex-col h-full p-4 sm:p-8">
+          <button onClick={() => { setGameState('language-select'); setSelectedLanguage(null); }} className="mb-4 text-indigo-900 bg-white/80 backdrop-blur-lg self-start px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-white transition-all text-sm sm:text-lg shadow-md border-2 border-white/50">← Change Language</button>
+          <h2 className="text-3xl sm:text-5xl font-kids text-white mb-6 text-center uppercase drop-shadow-md tracking-widest">{selectedLanguage} Adventure</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 overflow-y-auto flex-1 pb-12 px-2">
             {levels.map(level => {
               const stars = levelProgress[level.id] || 0;
               return (
-                <button key={level.id} onClick={() => startLevel(level)} className="bg-white p-4 sm:p-6 rounded-3xl sm:rounded-[2.5rem] shadow-md active:scale-95 transition-all group flex flex-col items-center border-2 border-transparent hover:border-indigo-200">
-                  <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full mb-3 flex items-center justify-center text-xl sm:text-2xl font-bold text-white shadow-md border-2 border-white ${level.difficulty === 'easy' ? 'bg-green-400' : level.difficulty === 'medium' ? 'bg-orange-400' : 'bg-red-400'}`}>{level.gridSize}x{level.gridSize}</div>
-                  <h3 className="text-sm sm:text-lg font-bold text-indigo-800 mb-1 text-center line-clamp-1">{level.name.split(':')[1] || level.name}</h3>
-                  <div className="mt-1">{renderStars(stars, 'text-xl sm:text-3xl')}</div>
+                <button key={level.id} onClick={() => startLevel(level)} className="bg-white p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl active:scale-95 transition-all group flex flex-col items-center border-4 border-transparent hover:border-indigo-200">
+                  <div className={`w-16 h-16 sm:w-28 sm:h-28 rounded-full mb-4 flex items-center justify-center text-2xl sm:text-5xl font-black text-white shadow-xl border-4 border-white ${level.difficulty === 'easy' ? 'bg-green-400' : level.difficulty === 'medium' ? 'bg-orange-400' : 'bg-red-400'}`}>{level.gridSize}x{level.gridSize}</div>
+                  <h3 className="text-lg sm:text-2xl font-black text-indigo-900 mb-2 text-center">{level.name.split(':')[1] || level.name}</h3>
+                  <div className="mt-1">{renderStars(stars, 'text-2xl sm:text-5xl')}</div>
                 </button>
               );
             })}
@@ -268,72 +245,64 @@ const App: React.FC = () => {
     if (!currentLevel) return null;
     const size = currentLevel.gridSize;
     const charSizeClass = getCharSizeClass(size);
-    
-    let themeClass = 'bg-blue-100';
-    if (selectedLanguage === 'Arabic') themeClass = 'desert-theme';
-    if (selectedLanguage === 'Pashto') themeClass = 'pashto-theme';
+    const themeClass = selectedLanguage === 'Arabic' ? 'desert-theme' : selectedLanguage === 'Pashto' ? 'pashto-theme' : 'bg-blue-100';
 
     return (
-      <div className={`h-full w-full flex flex-col items-center justify-between p-2 sm:p-4 ${themeClass} relative overflow-hidden`}>
-        {/* Header UI */}
-        <div className="w-full max-w-xl flex justify-between items-center bg-white/90 backdrop-blur-md p-2 sm:p-3 rounded-2xl shadow-lg border-2 border-white/50 z-10">
-          <button onClick={() => setGameState('level-select')} className="text-indigo-600 font-bold text-[10px] sm:text-xs px-3 py-2 hover:bg-white hover:shadow-sm active:scale-90 transition-all rounded-xl border border-indigo-50">Menu ←</button>
-          <div className="text-xs sm:text-sm font-kids text-indigo-900 px-2 line-clamp-1 flex-1 text-center font-bold">{currentLevel.name.split(':')[1] || currentLevel.name}</div>
-          <div className="text-[10px] sm:text-xs font-bold text-indigo-500 bg-indigo-50/50 px-2 sm:px-3 py-2 rounded-xl border border-indigo-100 whitespace-nowrap">Moves: {moves}</div>
+      <div className={`h-full w-full flex flex-col items-center justify-between pt-safe pb-safe px-safe ${themeClass} relative overflow-hidden`}>
+        {/* Header respects notification bar via pt-safe */}
+        <div className="w-full max-w-xl flex justify-between items-center bg-white/95 backdrop-blur-xl p-3 sm:p-5 rounded-3xl shadow-2xl border-2 border-white/50 z-20 mx-auto mt-2 sm:mt-4">
+          <button onClick={() => setGameState('level-select')} className="text-indigo-600 font-black text-xs sm:text-lg px-4 py-2.5 hover:bg-white hover:shadow-sm active:scale-90 transition-all rounded-2xl border border-indigo-100 bg-indigo-50/50">MENU ←</button>
+          <div className="text-sm sm:text-2xl font-kids text-indigo-900 px-2 flex-1 text-center font-black tracking-tight uppercase">{currentLevel.name.split(':')[1] || currentLevel.name}</div>
+          <div className="text-xs sm:text-lg font-black text-white bg-indigo-600 px-4 py-2.5 rounded-2xl border border-indigo-700 shadow-lg">MOVES: {moves}</div>
         </div>
 
-        {/* Board Container */}
-        <div className="flex-1 flex items-center justify-center w-full">
-          <div className="game-board-container relative bg-indigo-900/10 p-1 sm:p-2 rounded-none shadow-inner border-[6px] sm:border-8 border-white/40" role="grid">
+        <div className="flex-1 flex items-center justify-center w-full p-6">
+          <div className="game-board-container relative bg-indigo-950/20 p-1.5 sm:p-3 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-[8px] sm:border-[12px] border-white/80" role="grid">
             {tiles.map((tile) => {
               const row = Math.floor(tile.currentPos / size);
               const col = tile.currentPos % size;
               const isCorrect = tile.targetPos === tile.currentPos;
-              
-              const gap = 4; // Gap between tiles in pixels
+              const gap = 4;
               const cellStyle: React.CSSProperties = {
                 position: 'absolute',
                 width: `calc((100% - ${(size + 1) * gap}px) / ${size})`,
                 height: `calc((100% - ${(size + 1) * gap}px) / ${size})`,
                 top: `calc(${row * (100 / size)}% + ${gap}px)`,
                 left: `calc(${col * (100 / size)}% + ${gap}px)`,
-                transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
               };
               
-              if (!tile.letter) return <div key={`empty-${tile.targetPos}`} style={cellStyle} className="rounded-none bg-black/5 border-2 border-dashed border-white/10 flex items-center justify-center pointer-events-none" aria-hidden="true"></div>;
+              if (!tile.letter) return <div key={`empty-${tile.targetPos}`} style={cellStyle} className="bg-black/20 border-2 border-dashed border-white/30 flex items-center justify-center" aria-hidden="true"></div>;
               
-              const fontClass = tile.letter.language === 'Urdu' || tile.letter.language === 'Pashto' ? 'urdu-text' : tile.letter.language === 'Arabic' ? 'arabic-text' : '';
+              const fontClass = (tile.letter.language === 'Urdu' || tile.letter.language === 'Pashto') ? 'urdu-text' : tile.letter.language === 'Arabic' ? 'arabic-text' : '';
               
               return (
                 <button 
                   key={(tile.letter as any).instanceId} 
                   onClick={() => handleTileClick(tile.currentPos)} 
                   style={cellStyle} 
-                  className={`rounded-none flex flex-col items-center justify-center shadow-md sm:shadow-lg transition-all transform text-white border-2 border-white/40 group ${tile.letter.color} ${isCorrect ? 'tile-correct brightness-105' : 'active:brightness-110 active:scale-95'}`} 
-                  aria-label={`Tile ${tile.letter.name}`}
+                  className={`flex flex-col items-center justify-center shadow-2xl transition-all transform text-white border-2 border-white/60 ${tile.letter.color} ${isCorrect ? 'tile-correct brightness-105 scale-[1.02]' : 'active:brightness-110 active:scale-95'}`} 
                 >
-                  <span className="absolute top-0.5 left-1 text-[6px] sm:text-[10px] opacity-40 font-bold" aria-hidden="true">{tile.targetPos + 1}</span>
-                  <span className={`${fontClass} ${charSizeClass} pointer-events-none drop-shadow-md leading-none`} aria-hidden="true">{tile.letter.char}</span>
+                  <span className="absolute top-1 left-1.5 text-[10px] sm:text-[14px] opacity-60 font-black">{tile.targetPos + 1}</span>
+                  <span className={`${fontClass} ${charSizeClass} pointer-events-none drop-shadow-2xl leading-none`}>{tile.letter.char}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Footer Controls */}
-        <div className="w-full flex justify-center pb-4 sm:pb-8 pt-2">
-          <button onClick={() => startLevel(currentLevel)} className="bg-white text-indigo-600 font-bold text-lg sm:text-2xl px-10 py-4 sm:px-16 sm:py-6 rounded-3xl shadow-xl hover:bg-indigo-50 active:scale-95 transition-all border-4 border-indigo-200 flex items-center gap-3">
-            <span>Shuffle</span> <span className="text-2xl sm:text-3xl" aria-hidden="true">🔀</span>
+        <div className="w-full flex justify-center pb-8 sm:pb-16 pt-2 px-safe">
+          <button onClick={() => startLevel(currentLevel)} className="bg-white text-indigo-600 font-black text-2xl sm:text-4xl px-14 py-6 sm:px-24 sm:py-10 rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.2)] hover:bg-indigo-50 active:translate-y-2 active:shadow-none transition-all border-4 border-indigo-100 flex items-center gap-4 group">
+            <span className="group-hover:rotate-12 transition-transform">SHUFFLE</span> <span className="text-4xl sm:text-6xl" aria-hidden="true">🔀</span>
           </button>
         </div>
 
-        {/* Individual Success Celebration */}
         {celebration.show && celebration.letter && (
-          <div className="fixed bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-none z-50 animate-bounce">
-            <div className="bg-white/95 backdrop-blur px-6 py-4 sm:px-8 sm:py-5 rounded-3xl sm:rounded-[2.5rem] shadow-2xl border-4 border-yellow-400 flex flex-col items-center">
-              <span className={`text-4xl sm:text-5xl ${celebration.letter.language === 'Urdu' || celebration.letter.language === 'Pashto' ? 'urdu-text' : celebration.letter.language === 'Arabic' ? 'arabic-text' : ''} ${celebration.letter.color.replace('bg-', 'text-')}`}>{celebration.letter.char}</span>
-              <p className="text-sm sm:text-xl font-kids text-indigo-900 uppercase tracking-tighter">{celebration.letter.name}</p>
-              <p className="text-xs sm:text-lg font-kids text-green-600">{celebration.letter.exampleWord}</p>
+          <div className="fixed bottom-36 sm:bottom-48 left-1/2 -translate-x-1/2 pointer-events-none z-50 animate-bounce">
+            <div className="bg-white/98 backdrop-blur px-10 py-6 sm:px-16 sm:py-10 rounded-[3rem] sm:rounded-[4rem] shadow-[0_20px_60px_rgba(0,0,0,0.4)] border-4 border-yellow-400 flex flex-col items-center">
+              <span className={`text-6xl sm:text-8xl ${celebration.letter.language === 'Urdu' || celebration.letter.language === 'Pashto' ? 'urdu-text' : celebration.letter.language === 'Arabic' ? 'arabic-text' : ''} ${celebration.letter.color.replace('bg-', 'text-')}`}>{celebration.letter.char}</span>
+              <p className="text-xl sm:text-3xl font-kids text-indigo-900 uppercase tracking-tighter mt-2 font-black">{celebration.letter.name}</p>
+              <p className="text-lg sm:text-2xl font-kids text-green-600 font-black">{celebration.letter.exampleWord}</p>
             </div>
           </div>
         )}
@@ -342,29 +311,26 @@ const App: React.FC = () => {
   };
 
   const renderComplete = () => (
-    <div className="fixed inset-0 bg-indigo-900 bg-opacity-95 flex flex-col items-center justify-center z-[100] text-center p-6 overflow-hidden">
-      <h2 className="text-6xl sm:text-9xl font-kids text-white mb-6 drop-shadow-xl uppercase">DONE</h2>
-      <div className="flex flex-col items-center bg-white/10 backdrop-blur-sm p-6 sm:p-12 rounded-[2.5rem] sm:rounded-[3rem] mb-8 sm:mb-12 shadow-2xl border-4 border-white/20 w-full max-w-sm">
-        <p className="text-2xl sm:text-4xl text-yellow-400 mb-1 font-kids uppercase tracking-widest font-bold">VICTORY</p>
-        <p className="text-sm sm:text-xl text-indigo-200 mb-6 sm:mb-8 font-kids uppercase font-bold">PUZZLE MASTER</p>
-        <div className="flex gap-2 sm:gap-4 text-6xl sm:text-8xl mb-2">
-          {[1, 2, 3].map(i => <span key={i} className={`${i <= lastStars ? 'text-yellow-400 scale-110 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)]' : 'text-indigo-900/50'} transition-all duration-1000`}>★</span>)}
+    <div className="fixed inset-0 bg-indigo-950/98 backdrop-blur-2xl flex flex-col items-center justify-center z-[100] text-center p-6 pt-safe pb-safe px-safe">
+      <h2 className="text-8xl sm:text-[12rem] font-kids text-white mb-8 drop-shadow-[0_20px_20px_rgba(0,0,0,0.6)] uppercase tracking-tighter">SUCCESS!</h2>
+      <div className="flex flex-col items-center bg-white/15 backdrop-blur-md p-10 sm:p-20 rounded-[4rem] sm:rounded-[5rem] mb-12 shadow-2xl border-4 border-white/20 w-full max-w-lg">
+        <p className="text-4xl sm:text-6xl text-yellow-400 mb-2 font-kids uppercase tracking-widest font-black">PUZZLE SOLVED</p>
+        <div className="flex gap-4 sm:gap-8 text-8xl sm:text-[11rem] mb-6">
+          {[1, 2, 3].map(i => <span key={i} className={`${i <= lastStars ? 'text-yellow-400 scale-110 drop-shadow-[0_0_30px_rgba(250,204,21,1)]' : 'text-indigo-950/50'} transition-all duration-1000`}>★</span>)}
         </div>
       </div>
-      <div className="flex flex-col gap-4 w-full max-w-xs">
+      <div className="flex flex-col gap-6 w-full max-w-md">
         <button onClick={() => {
-          let levels = URDU_LEVELS;
-          if (selectedLanguage === 'Arabic') levels = ARABIC_LEVELS;
-          else if (selectedLanguage === 'English') levels = ENGLISH_LEVELS;
-          else if (selectedLanguage === 'Italian') levels = ITALIAN_LEVELS;
-          else if (selectedLanguage === 'Pashto') levels = PASHTO_LEVELS;
+          const levels = selectedLanguage === 'Arabic' ? ARABIC_LEVELS : 
+                         selectedLanguage === 'English' ? ENGLISH_LEVELS : 
+                         selectedLanguage === 'Italian' ? ITALIAN_LEVELS : 
+                         selectedLanguage === 'Pashto' ? PASHTO_LEVELS : URDU_LEVELS;
           const idx = levels.findIndex(l => l.id === currentLevel?.id);
           const next = levels[idx + 1];
           if (next) startLevel(next);
           else setGameState('level-select');
-        }} className="bg-orange-500 text-white font-bold py-4 sm:py-5 px-8 rounded-2xl text-2xl sm:text-3xl hover:bg-orange-400 active:scale-95 transition-all shadow-[0_6px_0_rgb(194,65,12)] active:translate-y-1 active:shadow-none border-2 border-white/20 flex items-center justify-center gap-2"><span>NEXT</span><span>→</span></button>
-        <button onClick={() => startLevel(currentLevel!)} className="bg-blue-600 text-white font-bold py-4 sm:py-5 px-8 rounded-2xl text-2xl sm:text-3xl hover:bg-blue-500 active:scale-95 transition-all shadow-[0_6px_0_rgb(30,64,175)] active:translate-y-1 active:shadow-none border-2 border-white/20 flex items-center justify-center gap-2"><span>AGAIN</span><span>↻</span></button>
-        <button onClick={() => setGameState('level-select')} className="bg-white/10 text-white font-bold py-3 sm:py-4 px-8 rounded-2xl text-xl sm:text-2xl hover:bg-white/20 active:scale-95 transition-all border-2 border-white/20 uppercase">Menu</button>
+        }} className="bg-orange-500 text-white font-black py-6 sm:py-8 px-12 rounded-[2rem] text-3xl sm:text-5xl hover:bg-orange-400 active:translate-y-2 shadow-[0_12px_0_rgb(194,65,12)] active:shadow-none border-4 border-white/30 flex items-center justify-center gap-4">NEXT ADVENTURE →</button>
+        <button onClick={() => setGameState('level-select')} className="bg-white/20 text-white font-black py-5 sm:py-7 px-12 rounded-[2rem] text-2xl sm:text-4xl hover:bg-white/30 active:scale-95 transition-all border-4 border-white/30 uppercase tracking-widest">MENU</button>
       </div>
     </div>
   );
