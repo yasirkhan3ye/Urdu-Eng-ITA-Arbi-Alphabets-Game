@@ -1,10 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Alphabet Slide Puzzle</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Fredoka+One&display=swap" rel="stylesheet">
     <style>
@@ -13,6 +16,14 @@
         --safe-bottom: env(safe-area-inset-bottom, 0px);
         --safe-left: env(safe-area-inset-left, 0px);
         --safe-right: env(safe-area-inset-right, 0px);
+      }
+      * {
+        scrollbar-width: none; 
+        -ms-overflow-style: none;
+        -webkit-touch-callout: none; /* Prevents long-press menu on Android/iOS */
+      }
+      *::-webkit-scrollbar {
+        display: none;
       }
       body {
         font-family: 'Fredoka One', cursive;
@@ -26,12 +37,14 @@
         margin: 0;
         padding: 0;
         background-color: #eff6ff;
+        overscroll-behavior-y: none; /* Prevents pull-to-refresh pull-down */
       }
       #root {
         height: 100dvh;
         width: 100%;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
       .font-kids {
         font-family: 'Fredoka One', cursive;
@@ -43,21 +56,40 @@
         font-family: 'Noto Sans Arabic', sans-serif;
       }
       
-      .animate-success {
-        animation: 
-          success-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-          sparkle-glow 1.5s ease-in-out infinite;
-      }
-
       @keyframes success-pop {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.3) rotate(8deg); filter: brightness(1.2); }
-        100% { transform: scale(1) rotate(0deg); }
+        0% { transform: scale(0); opacity: 0; }
+        70% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
       }
 
-      @keyframes sparkle-glow {
-        0%, 100% { box-shadow: 0 0 0px transparent; }
-        50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(255, 255, 255, 0.4); }
+      @keyframes star-pop {
+        0% { transform: scale(0); filter: brightness(2); }
+        80% { transform: scale(1.3); filter: brightness(1.5); }
+        100% { transform: scale(1); filter: brightness(1); }
+      }
+
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+
+      .animate-success-pop {
+        animation: success-pop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+
+      .animate-star-pop {
+        animation: star-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        display: inline-block;
+      }
+
+      .shimmer-card::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 70%);
+        background-size: 200% 200%;
+        animation: shimmer 3s infinite linear;
+        pointer-events: none;
       }
 
       .desert-theme {
@@ -94,15 +126,15 @@
 
       .game-board-container {
         width: 90vw;
-        max-width: min(90vw, 55vh);
+        max-width: min(90vw, 45vh); 
         aspect-ratio: 1/1;
       }
 
       .pt-safe {
-        padding-top: calc(var(--safe-top) + 0.5rem);
+        padding-top: var(--safe-top);
       }
       .pb-safe {
-        padding-bottom: calc(var(--safe-bottom) + 0.5rem);
+        padding-bottom: var(--safe-bottom);
       }
       .px-safe {
         padding-left: var(--safe-left);
@@ -114,7 +146,6 @@
       "imports": {
         "react/": "https://esm.sh/react@^19.2.4/",
         "react": "https://esm.sh/react@^19.2.4",
-        "@google/genai": "https://esm.sh/@google/genai@^1.39.0",
         "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
       }
     }
