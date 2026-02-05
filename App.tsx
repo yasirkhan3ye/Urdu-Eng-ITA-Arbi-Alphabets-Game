@@ -97,6 +97,7 @@ const App: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   
   const [celebration, setCelebration] = useState<{ letter: AlphabetLetter | null; show: boolean }>({
     letter: null,
@@ -120,7 +121,20 @@ const App: React.FC = () => {
         setLevelProgress(JSON.parse(saved));
       } catch (e) { console.error(e); }
     }
+
+    const savedSound = localStorage.getItem('alphabet_sliding_sound_enabled');
+    if (savedSound !== null) {
+      setIsSoundEnabled(savedSound === 'true');
+    }
   }, []);
+
+  const toggleSound = () => {
+    setIsSoundEnabled(prev => {
+      const newVal = !prev;
+      localStorage.setItem('alphabet_sliding_sound_enabled', String(newVal));
+      return newVal;
+    });
+  };
 
   const saveProgress = (levelId: number, stars: number) => {
     setLevelProgress(prev => {
@@ -224,7 +238,10 @@ const App: React.FC = () => {
       });
       setTiles(newTiles);
       setMoves(m => m + 1);
-      alphabetVoiceService.speak(clickedTile.letter.char, clickedTile.letter.language);
+      
+      if (isSoundEnabled) {
+        alphabetVoiceService.speak(clickedTile.letter.char, clickedTile.letter.language);
+      }
       
       if (clickedTile.targetPos === emptyPos) {
         setCelebration({ letter: clickedTile.letter, show: true });
@@ -239,7 +256,9 @@ const App: React.FC = () => {
         setLastStars(stars);
         saveProgress(currentLevel.id, stars);
         
-        alphabetVoiceService.playWinMelody();
+        if (isSoundEnabled) {
+          alphabetVoiceService.playWinMelody();
+        }
         setTimeout(() => setGameState('complete'), 500);
       }
     }
@@ -296,12 +315,23 @@ const App: React.FC = () => {
     <div className="flex flex-col items-center justify-center h-full w-full text-center p-6 sky-theme pt-safe pb-safe px-safe relative">
       <h1 className="text-4xl sm:text-8xl md:text-9xl font-kids text-white mb-6 drop-shadow-2xl">Alphabet Slide</h1>
       <p className="text-base sm:text-3xl text-blue-100 mb-8 max-w-lg font-kids uppercase tracking-widest px-4">Tap to Learn & Play</p>
-      <button 
-        onClick={() => setGameState('language-select')}
-        className="bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-indigo-900 font-bold py-5 px-10 sm:py-8 sm:px-20 rounded-full text-xl sm:text-5xl shadow-[0_8px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all border-4 border-white"
-      >
-        PLAY NOW
-      </button>
+      
+      <div className="flex flex-col gap-4">
+        <button 
+          onClick={() => setGameState('language-select')}
+          className="bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-indigo-900 font-bold py-5 px-10 sm:py-8 sm:px-20 rounded-full text-xl sm:text-5xl shadow-[0_8px_0_rgb(180,130,0)] active:translate-y-2 active:shadow-none transition-all border-4 border-white"
+        >
+          PLAY NOW
+        </button>
+        
+        <button 
+          onClick={toggleSound}
+          className="bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-8 rounded-full text-sm sm:text-2xl backdrop-blur-md border-2 border-white/30 active:scale-95 transition-all flex items-center justify-center gap-3"
+        >
+          <span>SOUND: {isSoundEnabled ? 'ON' : 'OFF'}</span>
+          <span className="text-lg sm:text-3xl">{isSoundEnabled ? '🔊' : '🔇'}</span>
+        </button>
+      </div>
 
       {/* Floating Feedback Button */}
       <button 
@@ -412,17 +442,27 @@ const App: React.FC = () => {
 
     return (
       <div className={`h-full w-full flex flex-col items-center justify-between pt-safe pb-safe px-safe ${themeClass} relative overflow-hidden`}>
-        {/* Header with Help Button */}
+        {/* Header with Help & Sound Buttons */}
         <div className="w-full max-w-xl flex justify-between items-center bg-white/95 backdrop-blur-xl p-2 sm:p-5 rounded-xl sm:rounded-3xl shadow-xl border-2 border-white/50 z-20 mx-auto mt-1 sm:mt-4">
           <button onClick={() => setGameState('level-select')} className="text-indigo-600 font-black text-[9px] sm:text-lg px-2 py-1.5 sm:px-4 sm:py-2.5 hover:bg-white hover:shadow-sm active:scale-90 transition-all rounded-lg border border-indigo-100 bg-indigo-50/50">MENU ←</button>
           <div className="text-[10px] sm:text-2xl font-kids text-indigo-900 px-2 flex-1 text-center font-black tracking-tight uppercase truncate">{currentLevel.name.split(':')[1] || currentLevel.name}</div>
-          <button 
-            onClick={() => setShowHelp(true)}
-            className="bg-yellow-400 text-indigo-900 w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center font-black text-lg sm:text-3xl shadow-md border-2 border-white active:scale-90 transition-all ml-2"
-            aria-label="How to play"
-          >
-            ?
-          </button>
+          
+          <div className="flex items-center gap-1 sm:gap-3">
+            <button 
+              onClick={toggleSound}
+              className={`${isSoundEnabled ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'} w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-sm sm:text-2xl shadow-md border-2 border-white active:scale-90 transition-all`}
+              aria-label="Toggle Sound"
+            >
+              {isSoundEnabled ? '🔊' : '🔇'}
+            </button>
+            <button 
+              onClick={() => setShowHelp(true)}
+              className="bg-yellow-400 text-indigo-900 w-8 h-8 sm:w-14 sm:h-14 rounded-full flex items-center justify-center font-black text-lg sm:text-3xl shadow-md border-2 border-white active:scale-90 transition-all"
+              aria-label="How to play"
+            >
+              ?
+            </button>
+          </div>
         </div>
 
         {/* Game Board */}
