@@ -3,16 +3,24 @@ import { Language } from "../types";
 export class AlphabetVoiceService {
   private synthesis: SpeechSynthesis;
   private audioContext: AudioContext | null = null;
+  private voices: SpeechSynthesisVoice[] = [];
 
   constructor() {
     this.synthesis = window.speechSynthesis;
+    this.loadVoices();
+    if (this.synthesis.onvoiceschanged !== undefined) {
+      this.synthesis.onvoiceschanged = () => this.loadVoices();
+    }
+  }
+
+  private loadVoices() {
+    this.voices = this.synthesis.getVoices();
   }
 
   private initAudioContext() {
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    // Resume context if it was suspended (browser policy)
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
     }
@@ -33,11 +41,11 @@ export class AlphabetVoiceService {
     };
 
     utterance.lang = langMap[language] || 'en-US';
-    utterance.rate = 1.0;
-    utterance.pitch = 1.2;
+    utterance.rate = 0.9;
+    utterance.pitch = 1.1;
 
-    const voices = this.synthesis.getVoices();
-    const voice = voices.find(v => v.lang.startsWith(langMap[language]));
+    // Use pre-loaded voices if available
+    const voice = this.voices.find(v => v.lang.startsWith(langMap[language]));
     if (voice) {
       utterance.voice = voice;
     }
@@ -58,8 +66,6 @@ export class AlphabetVoiceService {
 
       osc.type = type;
       osc.frequency.setValueAtTime(freq, start);
-      
-      // Cheerful subtle slide up
       osc.frequency.exponentialRampToValueAtTime(freq * 1.02, start + duration);
 
       gain.gain.setValueAtTime(0, start);
@@ -73,21 +79,17 @@ export class AlphabetVoiceService {
       osc.stop(start + duration);
     };
 
-    // --- Cheerful Arpeggio (Rising Action) ---
-    playNote(261.63, now, 0.4);       // C4
-    playNote(329.63, now + 0.15, 0.4); // E4
-    playNote(392.00, now + 0.3, 0.4);  // G4
-    playNote(523.25, now + 0.45, 0.6); // C5
+    playNote(261.63, now, 0.4);       
+    playNote(329.63, now + 0.15, 0.4); 
+    playNote(392.00, now + 0.3, 0.4);  
+    playNote(523.25, now + 0.45, 0.6); 
 
-    // --- Triumphant "TA-DA!" Chord (Impact) ---
     const tadaTime = now + 0.7;
-    // Layered C Major chord for richness
-    playNote(261.63, tadaTime, 1.2, 0.15, 'sawtooth'); // Bass C
-    playNote(329.63, tadaTime, 1.2, 0.1, 'triangle'); // E
-    playNote(392.00, tadaTime, 1.2, 0.1, 'triangle'); // G
-    playNote(523.25, tadaTime, 1.5, 0.2, 'square');   // High C
+    playNote(261.63, tadaTime, 1.2, 0.15, 'sawtooth'); 
+    playNote(329.63, tadaTime, 1.2, 0.1, 'triangle'); 
+    playNote(392.00, tadaTime, 1.2, 0.1, 'triangle'); 
+    playNote(523.25, tadaTime, 1.5, 0.2, 'square');   
 
-    // --- Magical Sparkle (High freq notes) ---
     playNote(1046.50, tadaTime + 0.2, 0.4, 0.1);
     playNote(1318.51, tadaTime + 0.4, 0.4, 0.1);
     playNote(1567.98, tadaTime + 0.6, 0.5, 0.05);
