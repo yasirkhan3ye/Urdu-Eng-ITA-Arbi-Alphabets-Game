@@ -1,0 +1,10 @@
+
+{
+  "appId": "com.alphabetpuzzle.kids",
+  "appName": "Alphabet Slide",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

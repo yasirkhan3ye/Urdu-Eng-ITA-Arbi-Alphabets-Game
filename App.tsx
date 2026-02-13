@@ -14,7 +14,6 @@ const vibrate = (duration: number | number[] = 10) => {
   }
 };
 
-// Helper function to render star rating
 const renderStars = (count: number, className: string = '') => (
   <div className={`flex gap-0.5 ${className}`}>
     {[1, 2, 3].map(i => (
@@ -25,7 +24,6 @@ const renderStars = (count: number, className: string = '') => (
   </div>
 );
 
-// Helper function to get appropriate character size for different grid sizes
 const getCharSizeClass = (size: number) => {
   if (size <= 2) return 'text-5xl sm:text-7xl';
   if (size <= 3) return 'text-4xl sm:text-5xl';
@@ -128,7 +126,6 @@ const App: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
   
-  // Tutorial State
   const [tutorialStep, setTutorialStep] = useState<number>(0);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
 
@@ -172,6 +169,7 @@ const App: React.FC = () => {
   }, [selectedLanguage]);
 
   const toggleSound = () => {
+    alphabetVoiceService.warmUp();
     setIsSoundEnabled(prev => {
       const newVal = !prev;
       localStorage.setItem('alphabet_sliding_sound_enabled', String(newVal));
@@ -192,6 +190,7 @@ const App: React.FC = () => {
   };
 
   const startLevel = (level: Level) => {
+    alphabetVoiceService.warmUp();
     setCurrentLevel(level);
     setMoves(0);
     setShowHints(false);
@@ -277,6 +276,7 @@ const App: React.FC = () => {
   }, [currentLevel, tiles]);
 
   const handleTileClick = (clickedPos: number) => {
+    alphabetVoiceService.warmUp();
     const clickedTile = tiles.find(t => t.currentPos === clickedPos);
     
     if (selectedTilePos === null) {
@@ -284,7 +284,7 @@ const App: React.FC = () => {
         setSelectedTilePos(clickedPos);
         vibrate(5);
         if (isSoundEnabled) {
-          alphabetVoiceService.speak(clickedTile.letter.char, clickedTile.letter.language);
+          alphabetVoiceService.speak(clickedTile.letter.name, clickedTile.letter.language);
         }
       }
       return;
@@ -297,7 +297,7 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!clickedTile?.letter) {
+    if (!clickedTile?.letter && selectedTile?.letter) {
       const path = findPath(selectedTilePos, clickedPos);
       if (path) {
         const newTiles = tiles.map(t => {
@@ -310,6 +310,10 @@ const App: React.FC = () => {
         setSelectedTilePos(null);
         vibrate(15);
         
+        if (isSoundEnabled && selectedTile.letter && clickedPos === selectedTile.targetPos) {
+           alphabetVoiceService.speak(selectedTile.letter.name, selectedTile.letter.language);
+        }
+
         if (isTutorialActive && tutorialStep === 4) {
           setTutorialStep(5);
         }
@@ -324,8 +328,18 @@ const App: React.FC = () => {
     } else {
       setSelectedTilePos(clickedPos);
       vibrate(5);
-      if (isSoundEnabled) {
-        alphabetVoiceService.speak(clickedTile.letter.char, clickedTile.letter.language);
+      if (isSoundEnabled && clickedTile?.letter) {
+        alphabetVoiceService.speak(clickedTile.letter.name, clickedTile.letter.language);
+      }
+    }
+  };
+
+  const repeatCurrentLetter = () => {
+    if (selectedTilePos !== null) {
+      const tile = tiles.find(t => t.currentPos === selectedTilePos);
+      if (tile?.letter && isSoundEnabled) {
+        alphabetVoiceService.speak(tile.letter.name, tile.letter.language);
+        vibrate(5);
       }
     }
   };
@@ -341,7 +355,14 @@ const App: React.FC = () => {
     setLastStars(stars);
     if (currentLevel) saveProgress(currentLevel.id, stars);
     setGameState('complete');
-    if (isSoundEnabled) alphabetVoiceService.playWinMelody();
+    if (isSoundEnabled) {
+      alphabetVoiceService.playWinMelody();
+      setTimeout(() => {
+        const lang = selectedLanguage || 'English';
+        const msg = lang === 'Urdu' ? 'بہت اچھے' : lang === 'Arabic' ? 'أحسنتم' : 'Well done!';
+        alphabetVoiceService.speak(msg, lang);
+      }, 1000);
+    }
     
     if (isTutorialActive) {
       completeTutorial();
@@ -364,6 +385,7 @@ const App: React.FC = () => {
         <button 
           onClick={() => { 
             vibrate(20); 
+            alphabetVoiceService.warmUp();
             setGameState('language-select');
             if (tutorialStep === 1) advanceTutorial(1);
           }}
@@ -384,16 +406,16 @@ const App: React.FC = () => {
   );
 
   const renderLanguageSelect = () => {
-    const langFlags: Record<Language, string> = {
-      'Urdu': '🇵🇰',
-      'Arabic': '🇸🇦',
-      'English': '🇺🇸',
-      'Italian': '🇮🇹',
-      'Pashto': '🇦🇫'
-    };
+    const langData = [
+      { id: 'Pashto', flag: '🇦🇫', script: 'پښتو', label: 'PASHTO', borderColor: 'border-orange-400' },
+      { id: 'Urdu', flag: '🇵🇰', script: 'اردو زبان', label: 'URDU', borderColor: 'border-sky-400' },
+      { id: 'English', flag: '🇬🇧', script: 'English', label: 'ENGLISH', borderColor: 'border-sky-400' },
+      { id: 'Arabic', flag: '🇸🇦', script: 'اللغة العربية', label: 'ARABIC', borderColor: 'border-orange-400' },
+      { id: 'Italian', flag: '🇮🇹', script: 'Italiano', label: 'ITALIAN', borderColor: 'border-sky-400' },
+    ];
 
     return (
-      <div className="h-full sky-theme p-6 flex flex-col items-center justify-center relative">
+      <div className="h-full sky-theme px-6 py-12 flex flex-col items-center overflow-y-auto">
         {isTutorialActive && tutorialStep === 2 && (
           <TutorialOverlay 
             step={2} 
@@ -403,28 +425,33 @@ const App: React.FC = () => {
             onSkip={completeTutorial}
           />
         )}
-        <h2 className="text-3xl sm:text-4xl font-kids text-white mb-8 text-center drop-shadow-md">SELECT LANGUAGE</h2>
-        <div className="grid grid-cols-2 gap-4 max-w-lg w-full">
-          {(['Urdu', 'Arabic', 'English', 'Italian', 'Pashto'] as Language[]).map(lang => (
+        <h2 className="text-4xl sm:text-5xl font-kids text-white mb-10 text-center drop-shadow-md tracking-wide">
+          Pick Your Journey
+        </h2>
+        <div className="grid grid-cols-2 gap-6 max-w-lg w-full mb-12">
+          {langData.map((lang) => (
             <button
-              key={lang}
+              key={lang.id}
               onClick={() => { 
                 vibrate(10); 
-                setSelectedLanguage(lang); 
+                alphabetVoiceService.warmUp();
+                setSelectedLanguage(lang.id as Language); 
                 setGameState('level-select');
                 if (tutorialStep === 2) setTutorialStep(3);
               }}
-              className={`relative p-6 bg-white rounded-[2rem] shadow-xl active:scale-95 transition-all border-4 border-transparent hover:border-yellow-400 flex flex-col items-center gap-2 ${isTutorialActive && tutorialStep === 2 ? 'ring-4 ring-yellow-400' : ''}`}
+              className={`
+                bg-white rounded-[3.5rem] shadow-xl p-6 flex flex-col items-center justify-between aspect-square
+                border-[6px] ${lang.borderColor} active:scale-95 transition-all
+                ${isTutorialActive && tutorialStep === 2 ? 'ring-4 ring-yellow-400' : ''}
+              `}
             >
-              <span className="absolute top-3 left-3 text-xl">{langFlags[lang]}</span>
-              <span className={`text-4xl mt-4 ${lang === 'Urdu' || lang === 'Pashto' ? 'urdu-text' : lang === 'Arabic' ? 'arabic-text' : ''}`}>
-                {lang === 'Urdu' ? 'اردو' : lang === 'Arabic' ? 'العربية' : lang === 'Pashto' ? 'پښتو' : lang[0]}
-              </span>
-              <span className="text-lg font-black text-indigo-900">{lang}</span>
+              <span className="text-3xl sm:text-4xl mb-2">{lang.flag}</span>
+              <span className={`text-2xl sm:text-3xl font-bold text-center leading-tight mb-2 ${lang.id === 'Urdu' || lang.id === 'Pashto' ? 'urdu-text' : lang.id === 'Arabic' ? 'arabic-text' : ''} text-indigo-900`}>{lang.script}</span>
+              <span className="text-xs sm:text-sm font-black text-sky-500 tracking-widest">{lang.label}</span>
             </button>
           ))}
         </div>
-        <button onClick={() => setGameState('home')} className="mt-10 text-white font-bold underline text-lg">← Back</button>
+        <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('home'); }} className="mt-4 text-white font-black text-xl hover:scale-105 transition-transform underline underline-offset-8">Go Back</button>
       </div>
     );
   };
@@ -446,7 +473,7 @@ const App: React.FC = () => {
           />
         )}
         <header className="flex items-center justify-between mb-6 pt-safe">
-          <button onClick={() => setGameState('language-select')} className="text-indigo-600 font-black">← LANGUAGES</button>
+          <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('language-select'); }} className="text-indigo-600 font-black">← LANGUAGES</button>
           <h2 className="text-xl font-kids text-indigo-900">{selectedLanguage} LEVELS</h2>
           <div className="w-12"></div>
         </header>
@@ -462,9 +489,7 @@ const App: React.FC = () => {
                 onClick={() => { vibrate(10); startLevel(level); }}
                 className={`p-4 rounded-[2rem] shadow-md transition-all flex flex-col items-center gap-1 border-4 ${isUnlocked ? 'bg-white border-white active:scale-95' : 'bg-gray-200 border-gray-300 opacity-50'} ${isTutorialFocus ? 'ring-4 ring-yellow-400 animate-pulse' : ''}`}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white text-sm ${level.difficulty === 'easy' ? 'bg-green-400' : level.difficulty === 'medium' ? 'bg-orange-400' : 'bg-red-400'}`}>
-                  {level.gridSize}
-                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white text-sm ${level.difficulty === 'easy' ? 'bg-green-400' : level.difficulty === 'medium' ? 'bg-orange-400' : 'bg-red-400'}`}>{level.gridSize}</div>
                 <div className="font-black text-xs text-indigo-900">Level {i + 1}</div>
                 {renderStars(stars, 'text-[10px]')}
               </button>
@@ -502,13 +527,23 @@ const App: React.FC = () => {
         )}
 
         <header className="flex items-center justify-between mb-4 bg-white p-3 rounded-2xl shadow-md border-2 border-indigo-50">
-          <div>
-            <h3 className="text-xs font-black text-indigo-900 uppercase">{currentLevel.name.split(':')[0]}</h3>
-            <p className="text-[10px] text-indigo-400 font-bold">MOVES: {moves}</p>
+          <div className="flex items-center gap-3">
+             <div>
+                <h3 className="text-xs font-black text-indigo-900 uppercase">{currentLevel.name.split(':')[0]}</h3>
+                <p className="text-[10px] text-indigo-400 font-bold">MOVES: {moves}</p>
+             </div>
+             {selectedTilePos !== null && (
+               <button 
+                 onClick={repeatCurrentLetter}
+                 className="w-10 h-10 bg-yellow-100 text-xl rounded-full flex items-center justify-center animate-pulse border border-yellow-200"
+               >
+                 🔊
+               </button>
+             )}
           </div>
           <div className="flex gap-2">
             <button onClick={toggleSound} className="w-10 h-10 bg-indigo-50 text-lg rounded-full flex items-center justify-center">{isSoundEnabled ? '🔊' : '🔇'}</button>
-            <button onClick={() => setGameState('level-select')} className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black border border-red-100">QUIT</button>
+            <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('level-select'); }} className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black border border-red-100">QUIT</button>
           </div>
         </header>
 
@@ -522,7 +557,6 @@ const App: React.FC = () => {
               const isSelected = selectedTilePos === slotIndex;
               const isCorrect = tile?.letter && tile.currentPos === tile.targetPos;
               const charClass = (tile?.letter?.language === 'Urdu' || tile?.letter?.language === 'Pashto') ? 'urdu-text' : tile?.letter?.language === 'Arabic' ? 'arabic-text' : '';
-              
               const isMoveable = tile?.letter && emptyPosList.some(ep => findPath(slotIndex, ep));
               const shouldShowBlink = showHints && !isCorrect && isMoveable;
 
@@ -553,22 +587,8 @@ const App: React.FC = () => {
         </div>
         
         <footer className="mt-6 flex justify-center gap-4">
-          <button 
-            onClick={() => { vibrate(10); startLevel(currentLevel); }}
-            className="flex-1 py-4 bg-white text-indigo-600 rounded-full text-sm font-black shadow-lg active:scale-95 border-2 border-indigo-100"
-          >
-            SHUFFLE 🔀
-          </button>
-          <button 
-            onClick={() => { 
-              vibrate(10); 
-              setShowHints(!showHints); 
-              if (tutorialStep === 5) completeTutorial();
-            }}
-            className={`flex-1 py-4 ${showHints ? 'bg-yellow-400 text-indigo-900' : 'bg-white text-indigo-600'} rounded-full text-sm font-black shadow-lg active:scale-95 border-2 border-indigo-100 ${isTutorialActive && tutorialStep === 5 ? 'ring-4 ring-indigo-600 animate-pulse' : ''}`}
-          >
-            {showHints ? 'HINTS ON 💡' : 'HINTS OFF 💡'}
-          </button>
+          <button onClick={() => { vibrate(10); alphabetVoiceService.warmUp(); startLevel(currentLevel); }} className="flex-1 py-4 bg-white text-indigo-600 rounded-full text-sm font-black shadow-lg active:scale-95 border-2 border-indigo-100">SHUFFLE 🔀</button>
+          <button onClick={() => { vibrate(10); alphabetVoiceService.warmUp(); setShowHints(!showHints); if (tutorialStep === 5) completeTutorial(); }} className={`flex-1 py-4 ${showHints ? 'bg-yellow-400 text-indigo-900' : 'bg-white text-indigo-600'} rounded-full text-sm font-black shadow-lg active:scale-95 border-2 border-indigo-100 ${isTutorialActive && tutorialStep === 5 ? 'ring-4 ring-indigo-600 animate-pulse' : ''}`}>{showHints ? 'HINTS ON 💡' : 'HINTS OFF 💡'}</button>
         </footer>
       </div>
     );
@@ -585,6 +605,7 @@ const App: React.FC = () => {
           <button 
             onClick={() => {
               vibrate(20);
+              alphabetVoiceService.warmUp();
               const levels = selectedLanguage === 'Urdu' ? URDU_LEVELS :
                              selectedLanguage === 'Arabic' ? ARABIC_LEVELS :
                              selectedLanguage === 'English' ? ENGLISH_LEVELS :
@@ -597,12 +618,7 @@ const App: React.FC = () => {
           >
             NEXT →
           </button>
-          <button 
-            onClick={() => setGameState('level-select')}
-            className="w-full py-4 bg-indigo-100 text-indigo-600 rounded-2xl font-black text-lg"
-          >
-            MENU
-          </button>
+          <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('level-select'); }} className="w-full py-4 bg-indigo-100 text-indigo-600 rounded-2xl font-black text-lg">MENU</button>
         </div>
       </div>
     </div>

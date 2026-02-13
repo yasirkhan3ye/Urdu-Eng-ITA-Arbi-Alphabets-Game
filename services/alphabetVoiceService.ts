@@ -1,98 +1,183 @@
+
+import { GoogleGenAI, Modality } from "@google/genai";
 import { Language } from "../types";
 
+// Manual base64 decoding as required for raw PCM data
+function decodeBase64(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// Manual PCM decoding to AudioBuffer
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+
 export class AlphabetVoiceService {
-  private synthesis: SpeechSynthesis;
+  private localSynthesis: SpeechSynthesis | null = null;
   private audioContext: AudioContext | null = null;
+  private isWarmedUp: boolean = false;
   private voices: SpeechSynthesisVoice[] = [];
 
   constructor() {
-    this.synthesis = window.speechSynthesis;
-    this.loadVoices();
-    if (this.synthesis.onvoiceschanged !== undefined) {
-      this.synthesis.onvoiceschanged = () => this.loadVoices();
+    if (typeof window !== 'undefined') {
+      this.localSynthesis = window.speechSynthesis;
+      this.tryLoadLocalVoices();
+      if (this.localSynthesis && this.localSynthesis.onvoiceschanged !== undefined) {
+        this.localSynthesis.onvoiceschanged = () => this.tryLoadLocalVoices();
+      }
     }
   }
 
-  private loadVoices() {
-    this.voices = this.synthesis.getVoices();
+  private tryLoadLocalVoices() {
+    if (!this.localSynthesis) return;
+    const fetched = this.localSynthesis.getVoices();
+    if (fetched.length > 0) this.voices = fetched;
   }
 
-  private initAudioContext() {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  public async warmUp() {
+    if (this.isWarmedUp) {
+      if (this.audioContext?.state === 'suspended') await this.audioContext.resume();
+      return;
     }
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+    
+    try {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+      
+      // Prime local TTS too
+      if (this.localSynthesis) {
+        this.localSynthesis.cancel();
+        const silent = new SpeechSynthesisUtterance("");
+        silent.volume = 0;
+        this.localSynthesis.speak(silent);
+      }
+    } catch (e) {
+      console.warn("Audio warm-up failed", e);
+    }
+    this.isWarmedUp = true;
+  }
+
+  /**
+   * Primary high-accuracy speech using Gemini Neural TTS
+   */
+  private async speakNeural(text: string, language: Language): Promise<boolean> {
+    try {
+      if (!process.env.API_KEY) return false;
+      
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const prompt = `Speak the ${language} alphabet character clearly and slowly for a child: ${text}`;
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' }, // Kore is often cheerful and clear
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (!base64Audio || !this.audioContext) return false;
+
+      const audioBuffer = await decodeAudioData(
+        decodeBase64(base64Audio),
+        this.audioContext,
+        24000,
+        1,
+      );
+
+      const source = this.audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.audioContext.destination);
+      source.start();
+      return true;
+    } catch (error) {
+      console.error("Neural TTS failed, falling back to local:", error);
+      return false;
     }
   }
 
-  speak(text: string, language: Language) {
-    if (!this.synthesis) return;
-
-    this.synthesis.cancel();
-
+  /**
+   * Local device fallback speech
+   */
+  private speakLocal(text: string, language: Language) {
+    if (!this.localSynthesis) return;
+    this.localSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
+    
     const langMap: Record<Language, string> = {
       'Urdu': 'ur-PK',
       'Arabic': 'ar-SA',
       'Pashto': 'ps-AF',
-      'English': 'en-US',
+      'English': 'en-GB',
       'Italian': 'it-IT'
     };
 
     utterance.lang = langMap[language] || 'en-US';
-    utterance.rate = 0.9;
+    utterance.rate = 0.75;
     utterance.pitch = 1.1;
 
-    // Use pre-loaded voices if available
-    const voice = this.voices.find(v => v.lang.startsWith(langMap[language]));
-    if (voice) {
-      utterance.voice = voice;
-    }
+    let voice = this.voices.find(v => v.lang === utterance.lang) || 
+                this.voices.find(v => v.lang.startsWith(utterance.lang.split('-')[0]));
+    if (voice) utterance.voice = voice;
 
-    this.synthesis.speak(utterance);
+    this.localSynthesis.speak(utterance);
   }
 
-  playWinMelody() {
-    this.initAudioContext();
+  public async speak(text: string, language: Language) {
+    await this.warmUp();
+    
+    // Try the accurate neural online engine first
+    const success = await this.speakNeural(text, language);
+    
+    // If neural fails (offline or API issue), use local synthesis
+    if (!success) {
+      this.speakLocal(text, language);
+    }
+  }
+
+  public playWinMelody() {
     if (!this.audioContext) return;
-
-    const ctx = this.audioContext;
-    const now = ctx.currentTime;
-
-    const playNote = (freq: number, start: number, duration: number, volume: number = 0.2, type: OscillatorType = 'sine') => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = type;
+    const now = this.audioContext.currentTime;
+    const playNote = (freq: number, start: number, duration: number) => {
+      const osc = this.audioContext!.createOscillator();
+      const g = this.audioContext!.createGain();
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, start);
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.02, start + duration);
-
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(volume, start + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.1, start + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.01, start + duration);
+      osc.connect(g);
+      g.connect(this.audioContext!.destination);
       osc.start(start);
       osc.stop(start + duration);
     };
-
-    playNote(261.63, now, 0.4);       
-    playNote(329.63, now + 0.15, 0.4); 
-    playNote(392.00, now + 0.3, 0.4);  
-    playNote(523.25, now + 0.45, 0.6); 
-
-    const tadaTime = now + 0.7;
-    playNote(261.63, tadaTime, 1.2, 0.15, 'sawtooth'); 
-    playNote(329.63, tadaTime, 1.2, 0.1, 'triangle'); 
-    playNote(392.00, tadaTime, 1.2, 0.1, 'triangle'); 
-    playNote(523.25, tadaTime, 1.5, 0.2, 'square');   
-
-    playNote(1046.50, tadaTime + 0.2, 0.4, 0.1);
-    playNote(1318.51, tadaTime + 0.4, 0.4, 0.1);
-    playNote(1567.98, tadaTime + 0.6, 0.5, 0.05);
+    [261.63, 329.63, 392.00, 523.25].forEach((f, i) => playNote(f, now + i * 0.12, 0.4));
   }
 }
 
