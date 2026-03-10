@@ -1,5 +1,5 @@
 
-export type Language = 'Urdu' | 'Arabic' | 'English' | 'Italian' | 'Pashto';
+export type Language = 'Urdu' | 'Arabic' | 'English' | 'Italian' | 'Pashto' | 'German';
 
 export interface AlphabetLetter {
   id: string;
@@ -11,7 +11,7 @@ export interface AlphabetLetter {
   language: Language;
 }
 
-export type GameState = 'home' | 'language-select' | 'level-select' | 'playing' | 'complete';
+export type GameState = 'home' | 'language-select' | 'level-select' | 'playing' | 'complete' | 'feedback' | 'alphabet-slide';
 
 export interface Level {
   id: number;

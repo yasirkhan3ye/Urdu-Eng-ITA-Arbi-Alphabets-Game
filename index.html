@@ -41,7 +41,7 @@
         padding: 0;
         overflow: hidden;
         position: fixed;
-        background-color: #eff6ff;
+        background-color: #fdfcf9;
         font-family: 'Fredoka One', cursive;
       }
       
@@ -60,7 +60,7 @@
 
       @keyframes success-pop {
         0% { transform: scale(0); opacity: 0; }
-        70% { transform: scale(1.2); opacity: 1; }
+        70% { transform: scale(1.1); opacity: 1; }
         100% { transform: scale(1); opacity: 1; }
       }
 
@@ -73,22 +73,26 @@
 
       @keyframes hint-pulse {
         0%, 100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 rgba(250, 204, 21, 0); }
-        50% { transform: scale(1.1); filter: brightness(1.4); box-shadow: 0 0 25px rgba(250, 204, 21, 1); }
+        50% { transform: scale(1.05); filter: brightness(1.2); box-shadow: 0 0 15px rgba(250, 204, 21, 0.6); }
       }
 
-      .animate-success-pop { animation: success-pop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-      .animate-hint-blink { animation: hint-pulse 1.2s infinite ease-in-out; }
-      .sky-theme { background: linear-gradient(to bottom, #60a5fa, #4f46e5); }
+      .animate-success-pop { animation: success-pop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      .animate-hint-blink { animation: hint-pulse 1.5s infinite ease-in-out; }
+      
+      .soft-theme { background-color: #fdfcf9; }
+      .card-shadow { box-shadow: 0 8px 30px rgba(0,0,0,0.04); }
+      .button-pop { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+      .button-pop:active { transform: scale(0.92); }
 
       @keyframes gentle-green-glow {
-        0%, 100% { box-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
-        50% { box-shadow: 0 0 20px rgba(74, 222, 128, 0.8); }
+        0%, 100% { box-shadow: 0 0 8px rgba(74, 222, 128, 0.3); }
+        50% { box-shadow: 0 0 15px rgba(74, 222, 128, 0.5); }
       }
 
       .tile-correct {
         animation: gentle-green-glow 2s infinite ease-in-out;
-        border-color: #4ade80 !important;
-        border-width: 4px !important;
+        border-color: #86efac !important;
+        border-width: 3px !important;
       }
 
       .pt-safe { padding-top: var(--safe-top); }

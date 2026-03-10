@@ -1,12 +1,18 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from "motion/react";
+import { ChevronLeft, ChevronRight, Home, Volume2, Play } from "lucide-react";
 import { GameState, Level, AlphabetLetter, Language, TileState } from './types';
-import { ALL_ALPHABET, URDU_LEVELS, ARABIC_LEVELS, ENGLISH_LEVELS, ITALIAN_LEVELS, PASHTO_LEVELS } from './constants';
+import { 
+  ALL_ALPHABET, 
+  URDU_LEVELS, ARABIC_LEVELS, ENGLISH_LEVELS, ITALIAN_LEVELS, PASHTO_LEVELS, GERMAN_LEVELS,
+  URDU_ALPHABET, ARABIC_ALPHABET, ENGLISH_ALPHABET, ITALIAN_ALPHABET, PASHTO_ALPHABET, GERMAN_ALPHABET
+} from './constants';
 import { alphabetVoiceService } from './services/alphabetVoiceService';
+import { musicService } from './services/musicService';
 
 const NUM_EMPTY_SPACES = 2;
-const CONTACT_EMAIL = "yasirkhan3ye@hotmail.com"; 
-const WHATSAPP_NUMBER = "393273161783";
+const FEEDBACK_FORM_URL = "https://forms.gle/CWeuXGzWLu4VXkjdA";
 
 const vibrate = (duration: number | number[] = 10) => {
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -45,7 +51,7 @@ const ConfettiBurst: React.FC = () => {
         vx: Math.cos(angle) * velocity,
         vy: Math.sin(angle) * velocity,
         size: 8 + Math.random() * 12,
-        color: ['#facc15', '#4ade80', '#60a5fa', '#f87171', '#c084fc', '#fb923c'][Math.floor(Math.random() * 6)],
+        color: ['#818cf8', '#34d399', '#60a5fa', '#f87171', '#c084fc', '#fb923c'][Math.floor(Math.random() * 6)],
         delay: Math.random() * 0.2,
         rotation: Math.random() * 360,
       };
@@ -86,24 +92,24 @@ const TutorialOverlay: React.FC<{
   const posClass = position === 'top' ? 'top-20' : position === 'bottom' ? 'bottom-32' : 'top-1/2 -translate-y-1/2';
   
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[200] flex flex-col items-center justify-center p-6 animate-fade-in">
-      <div className={`absolute ${posClass} w-full max-w-xs bg-white rounded-3xl p-6 shadow-2xl border-4 border-yellow-400 animate-success-pop`}>
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-indigo-900 px-4 py-1 rounded-full font-black text-xs uppercase">
-          Tutorial Step {step}
+    <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-[200] flex flex-col items-center justify-center p-6 animate-fade-in">
+      <div className={`absolute ${posClass} w-full max-w-xs bg-white rounded-[2.5rem] p-8 shadow-2xl border-2 border-indigo-50 animate-success-pop`}>
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest">
+          Step {step}
         </div>
-        <p className="text-indigo-900 font-bold text-center text-lg mb-6 leading-tight">
+        <p className="text-slate-800 font-bold text-center text-lg mb-8 leading-tight">
           {message}
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <button 
             onClick={onNext}
-            className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-transform"
+            className="button-pop w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-100"
           >
-            GOT IT! 👍
+            GOT IT!
           </button>
           <button 
             onClick={onSkip}
-            className="w-full py-2 text-indigo-400 font-bold text-xs hover:underline"
+            className="button-pop w-full py-3 bg-slate-50 text-slate-400 rounded-xl font-bold text-xs tracking-widest uppercase"
           >
             Skip Tutorial
           </button>
@@ -124,7 +130,10 @@ const App: React.FC = () => {
   const [moves, setMoves] = useState(0);
   const [showHints, setShowHints] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const [selectedTilePos, setSelectedTilePos] = useState<number | null>(null);
+  const [gameMode, setGameMode] = useState<'alphabet' | 'numbers' | 'baby-slide'>('alphabet');
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   
   const [tutorialStep, setTutorialStep] = useState<number>(0);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
@@ -144,7 +153,26 @@ const App: React.FC = () => {
     if (savedSound !== null) {
       setIsSoundEnabled(savedSound === 'true');
     }
+    const savedMusic = localStorage.getItem('alphabet_sliding_music_enabled');
+    if (savedMusic !== null) {
+      setIsMusicEnabled(savedMusic === 'true');
+    }
   }, []);
+
+  useEffect(() => {
+    if (isMusicEnabled && gameState === 'playing') {
+      musicService.start();
+    } else {
+      musicService.stop();
+    }
+  }, [isMusicEnabled, gameState]);
+
+  const toggleMusic = () => {
+    const newState = !isMusicEnabled;
+    setIsMusicEnabled(newState);
+    localStorage.setItem('alphabet_sliding_music_enabled', String(newState));
+    vibrate(10);
+  };
 
   const completeTutorial = () => {
     setIsTutorialActive(false);
@@ -221,7 +249,7 @@ const App: React.FC = () => {
       const randomEmptyPos = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
       const row = Math.floor(randomEmptyPos / size);
       const col = randomEmptyPos % size;
-      const neighbors = [];
+      const neighbors: number[] = [];
       if (row > 0) neighbors.push(randomEmptyPos - size);
       if (row < size - 1) neighbors.push(randomEmptyPos + size);
       if (col > 0) neighbors.push(randomEmptyPos - 1);
@@ -258,7 +286,7 @@ const App: React.FC = () => {
 
       const r = Math.floor(curr / size);
       const c = curr % size;
-      const neighbors = [];
+      const neighbors: number[] = [];
       if (r > 0) neighbors.push(curr - size);
       if (r < size - 1) neighbors.push(curr + size);
       if (c > 0) neighbors.push(curr - 1);
@@ -355,11 +383,11 @@ const App: React.FC = () => {
     setLastStars(stars);
     if (currentLevel) saveProgress(currentLevel.id, stars);
     setGameState('complete');
-    if (isSoundEnabled) {
+        if (isSoundEnabled) {
       alphabetVoiceService.playWinMelody();
       setTimeout(() => {
         const lang = selectedLanguage || 'English';
-        const msg = lang === 'Urdu' ? 'بہت اچھے' : lang === 'Arabic' ? 'أحسنتم' : 'Well done!';
+        const msg = lang === 'Urdu' ? 'بہت اچھے' : lang === 'Arabic' ? 'أحسنتم' : lang === 'German' ? 'Gut gemacht!' : 'Well done!';
         alphabetVoiceService.speak(msg, lang);
       }, 1000);
     }
@@ -370,36 +398,79 @@ const App: React.FC = () => {
   };
 
   const renderHome = () => (
-    <div className="flex flex-col items-center justify-center h-full sky-theme text-white p-4">
+    <div className="flex flex-col items-center justify-center h-full soft-theme text-slate-900 p-8">
       {isTutorialActive && tutorialStep === 1 && (
         <TutorialOverlay 
           step={1} 
-          message="Welcome! Let's start by picking a language to learn." 
+          message="Welcome! Let's learn alphabets and numbers with fun puzzles!" 
           position="center"
           onNext={() => advanceTutorial(1)}
           onSkip={completeTutorial}
         />
       )}
-      <h1 className="text-5xl sm:text-7xl font-kids mb-8 text-center drop-shadow-2xl animate-bounce">Alphabet Slide</h1>
-      <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 border-4 border-white/20 w-full max-sm:w-full max-w-sm">
+      <div className="mb-12 text-center">
+        <h1 className="text-6xl sm:text-8xl font-kids text-indigo-600 mb-4 tracking-tight">Kids Slide</h1>
+        <p className="text-indigo-400 font-bold tracking-widest uppercase text-sm">Learn & Play Together</p>
+      </div>
+      
+      <div className="w-full max-w-sm flex flex-col items-center gap-4">
         <button 
           onClick={() => { 
             vibrate(20); 
             alphabetVoiceService.warmUp();
+            setGameMode('alphabet');
             setGameState('language-select');
             if (tutorialStep === 1) advanceTutorial(1);
           }}
-          className={`w-full py-5 bg-yellow-400 hover:bg-yellow-300 text-indigo-900 rounded-full font-black text-2xl sm:text-3xl transition-all active:scale-95 shadow-[0_8px_0_rgb(180,130,0)] ${isTutorialActive && tutorialStep === 1 ? 'animate-pulse ring-8 ring-white' : ''}`}
+          className={`button-pop w-full py-6 bg-indigo-600 text-white rounded-[2.5rem] font-black text-2xl sm:text-3xl shadow-xl shadow-indigo-200 flex items-center justify-center gap-3 ${isTutorialActive && tutorialStep === 1 ? 'animate-pulse ring-8 ring-indigo-100' : ''}`}
         >
-          START GAME
+          <span>ALPHABETS</span>
+          <span className="text-3xl">🔤</span>
         </button>
-        <button onClick={toggleSound} className="text-xl flex items-center gap-2 opacity-90 hover:opacity-100 font-bold">
-          {isSoundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+
+        <button 
+          onClick={() => { 
+            vibrate(20); 
+            alphabetVoiceService.warmUp();
+            setGameMode('numbers');
+            setGameState('language-select');
+          }}
+          className="button-pop w-full py-6 bg-white border-4 border-indigo-600 text-indigo-600 rounded-[2.5rem] font-black text-2xl sm:text-3xl shadow-xl shadow-indigo-50 flex items-center justify-center gap-3"
+        >
+          <span>NUMBERS</span>
+          <span className="text-3xl">🔢</span>
         </button>
-        <div className="flex flex-col items-center text-xs opacity-70 gap-1 text-center font-bold mt-4">
-          <p>Support:</p>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="hover:underline">{CONTACT_EMAIL}</a>
-          <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp Support</a>
+
+        <button 
+          onClick={() => { 
+            vibrate(20); 
+            alphabetVoiceService.warmUp();
+            setGameMode('baby-slide');
+            setGameState('language-select');
+          }}
+          className="button-pop w-full py-6 bg-emerald-500 text-white rounded-[2.5rem] font-black text-2xl sm:text-3xl shadow-xl shadow-emerald-100 flex items-center justify-center gap-3"
+        >
+          <span>LEARN ABC</span>
+          <span className="text-3xl">👶</span>
+        </button>
+        
+        <div className="flex flex-col items-center gap-6 w-full mt-4">
+          <div className="flex gap-4">
+            <button onClick={toggleSound} className="button-pop px-6 py-3 bg-white border-2 border-slate-100 rounded-full text-slate-600 font-bold flex items-center gap-3 shadow-sm">
+              {isSoundEnabled ? '🔊 Sound' : '🔇 Sound'}
+            </button>
+            <button onClick={toggleMusic} className="button-pop px-6 py-3 bg-white border-2 border-slate-100 rounded-full text-slate-600 font-bold flex items-center gap-3 shadow-sm">
+              {isMusicEnabled ? '🎵 Music' : '🔇 Music'}
+            </button>
+          </div>
+          
+          <button 
+            onClick={() => { vibrate(10); setGameState('feedback'); }}
+            className="button-pop px-8 py-3 bg-indigo-50 text-indigo-600 rounded-full font-bold text-xs tracking-widest uppercase flex items-center gap-2"
+          >
+            <span>Help & Feedback</span>
+            <span>✨</span>
+          </button>
         </div>
       </div>
     </div>
@@ -407,15 +478,16 @@ const App: React.FC = () => {
 
   const renderLanguageSelect = () => {
     const langData = [
-      { id: 'Pashto', flag: '🇦🇫', script: 'پښتو', label: 'PASHTO', borderColor: 'border-orange-400' },
-      { id: 'Urdu', flag: '🇵🇰', script: 'اردو زبان', label: 'URDU', borderColor: 'border-sky-400' },
-      { id: 'English', flag: '🇬🇧', script: 'English', label: 'ENGLISH', borderColor: 'border-sky-400' },
-      { id: 'Arabic', flag: '🇸🇦', script: 'اللغة العربية', label: 'ARABIC', borderColor: 'border-orange-400' },
-      { id: 'Italian', flag: '🇮🇹', script: 'Italiano', label: 'ITALIAN', borderColor: 'border-sky-400' },
+      { id: 'Pashto', flag: '🇦🇫', script: 'پښتو', label: 'PASHTO', color: 'bg-orange-50' },
+      { id: 'Urdu', flag: '🇵🇰', script: 'اردو زبان', label: 'URDU', color: 'bg-indigo-50' },
+      { id: 'English', flag: '🇬🇧', script: 'English', label: 'ENGLISH', color: 'bg-sky-50' },
+      { id: 'Arabic', flag: '🇸🇦', script: 'اللغة العربية', label: 'ARABIC', color: 'bg-rose-50' },
+      { id: 'Italian', flag: '🇮🇹', script: 'Italiano', label: 'ITALIAN', color: 'bg-emerald-50' },
+      { id: 'German', flag: '🇩🇪', script: 'Deutsch', label: 'GERMAN', color: 'bg-amber-50' },
     ];
 
     return (
-      <div className="h-full sky-theme px-6 py-12 flex flex-col items-center overflow-y-auto">
+      <div className="h-full soft-theme px-8 py-12 flex flex-col items-center overflow-y-auto">
         {isTutorialActive && tutorialStep === 2 && (
           <TutorialOverlay 
             step={2} 
@@ -425,10 +497,14 @@ const App: React.FC = () => {
             onSkip={completeTutorial}
           />
         )}
-        <h2 className="text-4xl sm:text-5xl font-kids text-white mb-10 text-center drop-shadow-md tracking-wide">
-          Pick Your Journey
-        </h2>
-        <div className="grid grid-cols-2 gap-6 max-w-lg w-full mb-12">
+        <div className="mb-10 text-center">
+          <h2 className="text-4xl sm:text-5xl font-kids text-slate-800 mb-2 tracking-tight">
+            {gameMode === 'numbers' ? 'Number Language' : gameMode === 'baby-slide' ? 'Baby ABC Language' : 'Alphabet Language'}
+          </h2>
+          <p className="text-slate-400 font-bold text-xs tracking-widest uppercase">Select your journey</p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 max-w-lg w-full mb-12">
           {langData.map((lang) => (
             <button
               key={lang.id}
@@ -436,48 +512,62 @@ const App: React.FC = () => {
                 vibrate(10); 
                 alphabetVoiceService.warmUp();
                 setSelectedLanguage(lang.id as Language); 
-                setGameState('level-select');
+                if (gameMode === 'baby-slide') {
+                  setGameState('alphabet-slide');
+                  setCurrentSlideIndex(0);
+                } else {
+                  setGameState('level-select');
+                }
                 if (tutorialStep === 2) setTutorialStep(3);
               }}
               className={`
-                bg-white rounded-[3.5rem] shadow-xl p-6 flex flex-col items-center justify-between aspect-square
-                border-[6px] ${lang.borderColor} active:scale-95 transition-all
-                ${isTutorialActive && tutorialStep === 2 ? 'ring-4 ring-yellow-400' : ''}
+                button-pop ${lang.color} rounded-[2.5rem] p-6 flex flex-col items-center justify-center aspect-square
+                border-2 border-white shadow-sm
+                ${isTutorialActive && tutorialStep === 2 ? 'ring-4 ring-indigo-600' : ''}
               `}
             >
-              <span className="text-3xl sm:text-4xl mb-2">{lang.flag}</span>
-              <span className={`text-2xl sm:text-3xl font-bold text-center leading-tight mb-2 ${lang.id === 'Urdu' || lang.id === 'Pashto' ? 'urdu-text' : lang.id === 'Arabic' ? 'arabic-text' : ''} text-indigo-900`}>{lang.script}</span>
-              <span className="text-xs sm:text-sm font-black text-sky-500 tracking-widest">{lang.label}</span>
+              <span className="text-4xl mb-3">{lang.flag}</span>
+              <span className={`text-xl sm:text-2xl font-bold text-center leading-tight mb-1 ${lang.id === 'Urdu' || lang.id === 'Pashto' ? 'urdu-text' : lang.id === 'Arabic' ? 'arabic-text' : ''} text-slate-800`}>{lang.script}</span>
+              <span className="text-[10px] font-black text-slate-400 tracking-widest">{lang.label}</span>
             </button>
           ))}
         </div>
-        <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('home'); }} className="mt-4 text-white font-black text-xl hover:scale-105 transition-transform underline underline-offset-8">Go Back</button>
+        <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('home'); }} className="button-pop px-8 py-3 bg-white border-2 border-slate-100 rounded-full text-slate-400 font-bold text-sm tracking-widest uppercase">Go Back</button>
       </div>
     );
   };
 
   const renderLevelSelect = () => {
-    const levels = selectedLanguage === 'Urdu' ? URDU_LEVELS :
-                   selectedLanguage === 'Arabic' ? ARABIC_LEVELS :
-                   selectedLanguage === 'English' ? ENGLISH_LEVELS :
-                   selectedLanguage === 'Italian' ? ITALIAN_LEVELS : PASHTO_LEVELS;
+    const allLevels = selectedLanguage === 'Urdu' ? URDU_LEVELS :
+                     selectedLanguage === 'Arabic' ? ARABIC_LEVELS :
+                     selectedLanguage === 'English' ? ENGLISH_LEVELS :
+                     selectedLanguage === 'Italian' ? ITALIAN_LEVELS : 
+                     selectedLanguage === 'German' ? GERMAN_LEVELS : PASHTO_LEVELS;
+    
+    const levels = allLevels.filter(level => 
+      gameMode === 'numbers' ? level.name.includes('Numbers') : !level.name.includes('Numbers')
+    );
+
     return (
-      <div className="h-full bg-indigo-50 p-4 flex flex-col relative">
+      <div className="h-full soft-theme p-6 flex flex-col relative">
         {isTutorialActive && tutorialStep === 3 && (
           <TutorialOverlay 
             step={3} 
-            message="Choose Level 1 to start your first alphabet puzzle!" 
+            message={`Choose ${gameMode === 'numbers' ? 'Numbers' : 'Level 1'} to start your first puzzle!`} 
             position="top"
             onNext={() => advanceTutorial(3)}
             onSkip={completeTutorial}
           />
         )}
-        <header className="flex items-center justify-between mb-6 pt-safe">
-          <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('language-select'); }} className="text-indigo-600 font-black">← LANGUAGES</button>
-          <h2 className="text-xl font-kids text-indigo-900">{selectedLanguage} LEVELS</h2>
-          <div className="w-12"></div>
+        <header className="flex items-center justify-between mb-8 pt-safe">
+          <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('language-select'); }} className="button-pop px-4 py-2 bg-white border border-slate-100 rounded-full text-slate-400 font-bold text-[10px] tracking-widest uppercase">← BACK</button>
+          <div className="text-center">
+            <h2 className="text-2xl font-kids text-slate-800">{selectedLanguage} {gameMode === 'numbers' ? 'Numbers' : ''}</h2>
+            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Select {gameMode === 'numbers' ? 'Challenge' : 'Level'}</p>
+          </div>
+          <div className="w-16"></div>
         </header>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto flex-1 pb-safe">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto flex-1 pb-safe">
           {levels.map((level, i) => {
             const stars = levelProgress[level.id] || 0;
             const isUnlocked = i === 0 || levelProgress[levels[i-1].id] > 0;
@@ -487,11 +577,13 @@ const App: React.FC = () => {
                 key={level.id}
                 disabled={!isUnlocked}
                 onClick={() => { vibrate(10); startLevel(level); }}
-                className={`p-4 rounded-[2rem] shadow-md transition-all flex flex-col items-center gap-1 border-4 ${isUnlocked ? 'bg-white border-white active:scale-95' : 'bg-gray-200 border-gray-300 opacity-50'} ${isTutorialFocus ? 'ring-4 ring-yellow-400 animate-pulse' : ''}`}
+                className={`button-pop p-5 rounded-[2.5rem] shadow-sm flex flex-col items-center gap-2 border-2 ${isUnlocked ? 'bg-white border-white' : 'bg-slate-50 border-slate-100 opacity-40'} ${isTutorialFocus ? 'ring-4 ring-indigo-600 animate-pulse' : ''}`}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white text-sm ${level.difficulty === 'easy' ? 'bg-green-400' : level.difficulty === 'medium' ? 'bg-orange-400' : 'bg-red-400'}`}>{level.gridSize}</div>
-                <div className="font-black text-xs text-indigo-900">Level {i + 1}</div>
-                {renderStars(stars, 'text-[10px]')}
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-white text-sm ${level.difficulty === 'easy' ? 'bg-emerald-400' : level.difficulty === 'medium' ? 'bg-amber-400' : 'bg-rose-400'}`}>{level.gridSize}</div>
+                <div className="font-black text-[10px] text-slate-400 tracking-widest uppercase">
+                  {level.name.includes('Numbers') ? 'Numbers' : `Level ${i + 1}`}
+                </div>
+                {renderStars(stars, 'text-xs')}
               </button>
             );
           })}
@@ -506,7 +598,7 @@ const App: React.FC = () => {
     const emptyPosList = tiles.filter(t => !t.letter).map(t => t.currentPos);
 
     return (
-      <div className="h-full bg-slate-100 flex flex-col p-4 pt-safe pb-safe overflow-hidden relative">
+      <div className="h-full soft-theme flex flex-col p-6 pt-safe pb-safe overflow-hidden relative">
         {isTutorialActive && tutorialStep === 4 && (
           <TutorialOverlay 
             step={4} 
@@ -526,30 +618,31 @@ const App: React.FC = () => {
           />
         )}
 
-        <header className="flex items-center justify-between mb-4 bg-white p-3 rounded-2xl shadow-md border-2 border-indigo-50">
-          <div className="flex items-center gap-3">
+        <header className="flex items-center justify-between mb-6 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-4">
              <div>
-                <h3 className="text-xs font-black text-indigo-900 uppercase">{currentLevel.name.split(':')[0]}</h3>
-                <p className="text-[10px] text-indigo-400 font-bold">MOVES: {moves}</p>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{currentLevel.name.split(':')[0]}</h3>
+                <p className="text-xs text-indigo-600 font-bold">MOVES: {moves}</p>
              </div>
              {selectedTilePos !== null && (
                <button 
                  onClick={repeatCurrentLetter}
-                 className="w-10 h-10 bg-yellow-100 text-xl rounded-full flex items-center justify-center animate-pulse border border-yellow-200"
+                 className="w-10 h-10 bg-indigo-50 text-xl rounded-full flex items-center justify-center animate-pulse"
                >
                  🔊
                </button>
              )}
           </div>
-          <div className="flex gap-2">
-            <button onClick={toggleSound} className="w-10 h-10 bg-indigo-50 text-lg rounded-full flex items-center justify-center">{isSoundEnabled ? '🔊' : '🔇'}</button>
-            <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('level-select'); }} className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black border border-red-100">QUIT</button>
+          <div className="flex gap-3">
+            <button onClick={toggleSound} className="button-pop w-10 h-10 bg-slate-50 text-lg rounded-full flex items-center justify-center">{isSoundEnabled ? '🔊' : '🔇'}</button>
+            <button onClick={toggleMusic} className="button-pop w-10 h-10 bg-slate-50 text-lg rounded-full flex items-center justify-center">{isMusicEnabled ? '🎵' : '🔇'}</button>
+            <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('level-select'); }} className="button-pop px-4 py-2 bg-rose-50 text-rose-500 rounded-full text-[10px] font-black tracking-widest uppercase">QUIT</button>
           </div>
         </header>
 
         <div className="flex-1 flex items-center justify-center">
           <div 
-            className="grid gap-1 w-full aspect-square max-h-full bg-indigo-900/10 p-2 rounded-2xl shadow-xl border-4 border-white relative"
+            className="grid gap-2 w-full aspect-square max-h-full bg-slate-100/50 p-3 rounded-[2.5rem] shadow-inner border-4 border-white relative"
             style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
           >
             {Array.from({ length: size * size }).map((_, slotIndex) => {
@@ -565,9 +658,9 @@ const App: React.FC = () => {
                   key={slotIndex}
                   onClick={() => handleTileClick(slotIndex)}
                   className={`
-                    relative rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center cursor-pointer select-none
-                    ${tile?.letter ? `${tile.letter.color} text-white border-2 border-white/30` : 'bg-indigo-950/5 border-2 border-dashed border-indigo-200'}
-                    ${isSelected ? 'ring-4 ring-yellow-400 scale-95 z-10' : ''}
+                    relative rounded-2xl shadow-sm transition-all duration-300 flex items-center justify-center cursor-pointer select-none
+                    ${tile?.letter ? `${tile.letter.color} text-white border-2 border-white/20` : 'bg-white/40 border-2 border-dashed border-slate-200'}
+                    ${isSelected ? 'ring-4 ring-indigo-400 scale-95 z-10' : ''}
                     ${isCorrect ? 'tile-correct' : ''}
                     ${shouldShowBlink ? 'animate-hint-blink' : ''}
                   `}
@@ -578,7 +671,7 @@ const App: React.FC = () => {
                     </div>
                   )}
                   {(showHints || (isTutorialActive && tutorialStep >= 4)) && tile?.letter && (
-                    <span className="absolute top-0.5 left-1 text-[8px] opacity-40 font-black">{tile.targetPos + 1}</span>
+                    <span className="absolute top-1 left-2 text-[8px] opacity-40 font-black">{tile.targetPos + 1}</span>
                   )}
                 </button>
               );
@@ -586,21 +679,21 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <footer className="mt-6 flex justify-center gap-4">
-          <button onClick={() => { vibrate(10); alphabetVoiceService.warmUp(); startLevel(currentLevel); }} className="flex-1 py-4 bg-white text-indigo-600 rounded-full text-sm font-black shadow-lg active:scale-95 border-2 border-indigo-100">SHUFFLE 🔀</button>
-          <button onClick={() => { vibrate(10); alphabetVoiceService.warmUp(); setShowHints(!showHints); if (tutorialStep === 5) completeTutorial(); }} className={`flex-1 py-4 ${showHints ? 'bg-yellow-400 text-indigo-900' : 'bg-white text-indigo-600'} rounded-full text-sm font-black shadow-lg active:scale-95 border-2 border-indigo-100 ${isTutorialActive && tutorialStep === 5 ? 'ring-4 ring-indigo-600 animate-pulse' : ''}`}>{showHints ? 'HINTS ON 💡' : 'HINTS OFF 💡'}</button>
+        <footer className="mt-8 flex justify-center gap-4">
+          <button onClick={() => { vibrate(10); alphabetVoiceService.warmUp(); startLevel(currentLevel); }} className="button-pop flex-1 py-5 bg-white text-slate-600 rounded-[2rem] text-xs font-black tracking-widest uppercase shadow-sm border border-slate-100">SHUFFLE 🔀</button>
+          <button onClick={() => { vibrate(10); alphabetVoiceService.warmUp(); setShowHints(!showHints); if (tutorialStep === 5) completeTutorial(); }} className={`button-pop flex-1 py-5 ${showHints ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600'} rounded-[2rem] text-xs font-black tracking-widest uppercase shadow-sm border border-slate-100 ${isTutorialActive && tutorialStep === 5 ? 'ring-4 ring-indigo-600 animate-pulse' : ''}`}>{showHints ? 'HINTS ON 💡' : 'HINTS OFF 💡'}</button>
         </footer>
       </div>
     );
   };
 
   const renderComplete = () => (
-    <div className="fixed inset-0 bg-indigo-950/90 backdrop-blur-md flex items-center justify-center p-6 z-[100]">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-8 z-[100]">
       <ConfettiBurst />
-      <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl animate-success-pop text-center border-8 border-yellow-400">
-        <h2 className="text-5xl font-kids text-indigo-900 mb-2">WOW!</h2>
-        <p className="text-indigo-400 font-bold mb-6 tracking-widest uppercase">PUZZLE SOLVED!</p>
-        <div className="mb-8 flex justify-center">{renderStars(lastStars, 'text-6xl')}</div>
+      <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl animate-success-pop text-center border-4 border-indigo-50">
+        <h2 className="text-5xl font-kids text-indigo-600 mb-2">WOW!</h2>
+        <p className="text-slate-400 font-bold mb-8 tracking-widest uppercase text-xs">Puzzle Solved!</p>
+        <div className="mb-10 flex justify-center">{renderStars(lastStars, 'text-6xl')}</div>
         <div className="flex flex-col gap-4">
           <button 
             onClick={() => {
@@ -609,20 +702,200 @@ const App: React.FC = () => {
               const levels = selectedLanguage === 'Urdu' ? URDU_LEVELS :
                              selectedLanguage === 'Arabic' ? ARABIC_LEVELS :
                              selectedLanguage === 'English' ? ENGLISH_LEVELS :
-                             selectedLanguage === 'Italian' ? ITALIAN_LEVELS : PASHTO_LEVELS;
+                             selectedLanguage === 'Italian' ? ITALIAN_LEVELS : 
+                             selectedLanguage === 'German' ? GERMAN_LEVELS : PASHTO_LEVELS;
               const curIdx = levels.findIndex(l => l.id === currentLevel?.id);
               if (curIdx < levels.length - 1) startLevel(levels[curIdx + 1]);
               else setGameState('level-select');
             }}
-            className="w-full py-5 bg-orange-500 text-white rounded-3xl font-black text-2xl shadow-[0_8px_0_rgb(194,65,12)] active:translate-y-1 active:shadow-none transition-all"
+            className="button-pop w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-2xl shadow-lg shadow-indigo-100"
           >
             NEXT →
           </button>
-          <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('level-select'); }} className="w-full py-4 bg-indigo-100 text-indigo-600 rounded-2xl font-black text-lg">MENU</button>
+          <button onClick={() => { alphabetVoiceService.warmUp(); setGameState('level-select'); }} className="button-pop w-full py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-sm tracking-widest uppercase">Menu</button>
         </div>
       </div>
     </div>
   );
+
+  const renderFeedback = () => {
+    return (
+      <div className="h-full soft-theme p-8 flex flex-col items-center overflow-y-auto">
+        <header className="w-full flex items-center justify-between mb-12 pt-safe">
+          <button onClick={() => setGameState('home')} className="button-pop px-4 py-2 bg-white border border-slate-100 rounded-full text-slate-400 font-bold text-[10px] tracking-widest uppercase">← BACK</button>
+          <h2 className="text-2xl font-kids text-slate-800">Help & Feedback</h2>
+          <div className="w-16"></div>
+        </header>
+
+        <div className="w-full max-w-sm flex flex-col gap-6">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50 flex flex-col gap-4">
+            <h3 className="text-indigo-600 font-black text-sm tracking-widest uppercase mb-2">Support</h3>
+            
+            <button 
+              onClick={() => window.open(FEEDBACK_FORM_URL, '_blank')}
+              className="button-pop w-full p-8 bg-indigo-600 text-white rounded-[2rem] flex flex-col items-center gap-4 text-center shadow-lg shadow-indigo-100"
+            >
+              <span className="text-4xl">✨</span>
+              <div>
+                <p className="font-black text-lg">Send Feedback</p>
+                <p className="text-[10px] opacity-80 font-bold uppercase tracking-widest">Bugs, Ideas & Questions</p>
+              </div>
+            </button>
+
+            <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-4">
+              Your feedback helps us make the app better for everyone!
+            </p>
+          </div>
+
+          <div className="bg-indigo-50 p-8 rounded-[2.5rem] flex flex-col items-center text-center gap-2">
+            <p className="text-indigo-600 font-black text-xs tracking-widest uppercase">Version 3.3.0</p>
+            <p className="text-indigo-400 text-[10px] font-bold">Made with ❤️ for young learners</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAlphabetSlide = () => {
+    if (!selectedLanguage) return null;
+    
+    const alphabet = selectedLanguage === 'Urdu' ? URDU_ALPHABET :
+                     selectedLanguage === 'Arabic' ? ARABIC_ALPHABET :
+                     selectedLanguage === 'English' ? ENGLISH_ALPHABET :
+                     selectedLanguage === 'Italian' ? ITALIAN_ALPHABET : 
+                     selectedLanguage === 'German' ? GERMAN_ALPHABET : PASHTO_ALPHABET;
+    
+    const currentLetter = alphabet[currentSlideIndex];
+    
+    const nextSlide = () => {
+      if (currentSlideIndex < alphabet.length - 1) {
+        setCurrentSlideIndex(prev => prev + 1);
+        vibrate(10);
+      }
+    };
+    
+    const prevSlide = () => {
+      if (currentSlideIndex > 0) {
+        setCurrentSlideIndex(prev => prev - 1);
+        vibrate(10);
+      }
+    };
+    
+    const playLetterSound = () => {
+      alphabetVoiceService.speak(currentLetter.char, selectedLanguage);
+      vibrate(20);
+    };
+    
+    const playWordSound = () => {
+      if (currentLetter.exampleWord) {
+        alphabetVoiceService.speak(currentLetter.exampleWord, selectedLanguage);
+        vibrate(20);
+      }
+    };
+
+    return (
+      <div className="h-full soft-theme flex flex-col items-center justify-between p-6 relative overflow-hidden">
+        {/* Header */}
+        <header className="w-full flex items-center justify-between pt-safe">
+          <button 
+            onClick={() => setGameState('language-select')} 
+            className="button-pop p-4 bg-white border-2 border-slate-100 rounded-full text-slate-400 shadow-sm"
+          >
+            <Home size={24} />
+          </button>
+          <div className="text-center">
+            <h2 className="text-xl font-kids text-slate-800">{selectedLanguage}</h2>
+            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">
+              {currentSlideIndex + 1} / {alphabet.length}
+            </p>
+          </div>
+          <div className="w-14"></div>
+        </header>
+
+        {/* Slide Content */}
+        <div className="flex-1 w-full flex flex-col items-center justify-center gap-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentLetter.id}
+              initial={{ x: 300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -300, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="w-full flex flex-col items-center gap-6"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -50) nextSlide();
+                if (info.offset.x > 50) prevSlide();
+              }}
+            >
+              {/* Big Letter */}
+              <button 
+                onClick={playLetterSound}
+                className={`w-48 h-48 sm:w-64 sm:h-64 rounded-[3rem] ${currentLetter.color} flex items-center justify-center text-white shadow-2xl border-8 border-white/30 button-pop`}
+              >
+                <span className={`text-8xl sm:text-9xl font-black ${selectedLanguage === 'Urdu' || selectedLanguage === 'Pashto' ? 'urdu-text' : selectedLanguage === 'Arabic' ? 'arabic-text' : ''}`}>
+                  {currentLetter.char}
+                </span>
+              </button>
+
+              {/* Example Word */}
+              <div className="flex flex-col items-center gap-6">
+                <button 
+                  onClick={playWordSound}
+                  className="button-pop bg-white border-4 border-indigo-50 px-12 py-8 rounded-[3rem] shadow-xl flex flex-col items-center justify-center min-w-[280px]"
+                >
+                  <p className="text-indigo-400 font-black text-xs tracking-widest uppercase mb-2">
+                    {currentLetter.char} is for
+                  </p>
+                  <p className={`text-5xl sm:text-7xl font-black text-slate-800 ${selectedLanguage === 'Urdu' || selectedLanguage === 'Pashto' ? 'urdu-text' : selectedLanguage === 'Arabic' ? 'arabic-text' : ''}`}>
+                    {currentLetter.exampleWord}
+                  </p>
+                  <div className="mt-4 bg-indigo-600 text-white p-3 rounded-full shadow-lg shadow-indigo-100">
+                    <Volume2 size={24} />
+                  </div>
+                </button>
+                
+                <div className="flex flex-col items-center">
+                  <p className="text-sm font-black text-slate-400 tracking-[0.2em] uppercase">
+                    {currentLetter.name}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Navigation Controls */}
+        <div className="w-full max-w-md flex items-center justify-between gap-4 pb-safe">
+          <button 
+            onClick={prevSlide}
+            disabled={currentSlideIndex === 0}
+            className={`flex-1 py-6 rounded-[2rem] flex items-center justify-center gap-2 font-black text-xl shadow-lg transition-all button-pop ${currentSlideIndex === 0 ? 'bg-slate-100 text-slate-300' : 'bg-white text-indigo-600 border-2 border-indigo-50'}`}
+          >
+            <ChevronLeft size={32} />
+            <span className="hidden sm:inline">BACK</span>
+          </button>
+
+          <button 
+            onClick={playLetterSound}
+            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-200 button-pop"
+          >
+            <Volume2 size={40} />
+          </button>
+
+          <button 
+            onClick={nextSlide}
+            disabled={currentSlideIndex === alphabet.length - 1}
+            className={`flex-1 py-6 rounded-[2rem] flex items-center justify-center gap-2 font-black text-xl shadow-lg transition-all button-pop ${currentSlideIndex === alphabet.length - 1 ? 'bg-slate-100 text-slate-300' : 'bg-indigo-600 text-white shadow-indigo-200'}`}
+          >
+            <span className="hidden sm:inline">NEXT</span>
+            <ChevronRight size={32} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-full w-full font-kids antialiased text-slate-900 overflow-hidden">
@@ -631,6 +904,8 @@ const App: React.FC = () => {
       {gameState === 'level-select' && renderLevelSelect()}
       {gameState === 'playing' && renderPlaying()}
       {gameState === 'complete' && renderComplete()}
+      {gameState === 'feedback' && renderFeedback()}
+      {gameState === 'alphabet-slide' && renderAlphabetSlide()}
     </div>
   );
 };

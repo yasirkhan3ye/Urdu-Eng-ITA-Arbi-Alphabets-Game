@@ -1,17 +1,21 @@
-
 {
   "name": "alphabet-slide-puzzle",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "lint": "tsc --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.576.0",
+    "motion": "^12.34.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@capacitor/android": "^6.0.0",

@@ -97,7 +97,8 @@ export class AlphabetVoiceService {
       'Arabic': 'ar-SA',
       'Pashto': 'ps-AF',
       'English': 'en-GB',
-      'Italian': 'it-IT'
+      'Italian': 'it-IT',
+      'German': 'de-DE'
     };
 
     const targetLang = langMap[language];
